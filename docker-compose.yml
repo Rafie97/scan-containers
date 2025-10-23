@@ -1,0 +1,54 @@
+# This file orchestrates both the application server and a database.
+# To run: docker-compose up --build
+
+version: "3.8"
+
+services:
+  # The Expo App Server
+  app-server:
+    # Build the image from the Dockerfile in the current directory
+    build: .
+    ports:
+      # Map port 8081 of the container to port 8081 on the host machine
+      - "8081:8081"
+    environment:
+      # Pass environment variables to your app here
+      # Your React Native code can access these via a config file or process.env
+      - DATABASE_HOST=db
+      - DATABASE_USER=myuser
+      - DATABASE_PASSWORD=mypassword
+      - DATABASE_NAME=mydatabase
+    # This makes the app-server wait for the db to be ready before starting
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # The PostgreSQL Database
+  db:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+      - POSTGRES_DB=mydatabase
+    volumes:
+      # This persists the database data on the host machine
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      # Checks if the database is ready to accept connections
+      test: ["CMD-SHELL", "pg_isready -U myuser -d mydatabase"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# Define the network for the services to communicate
+networks:
+  app-network:
+    driver: bridge
+
+# Define the named volume for data persistence
+volumes:
+  postgres_data:
