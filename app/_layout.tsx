@@ -1,6 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as cell from 'expo-cellular';
-import { Stack, router } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import 'react-native-reanimated';
@@ -28,8 +28,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (isSignedIn === undefined) return console.error('isSignedIn is undefined');
-    if (isSignedIn) return router.navigate('/Home');
-    router.navigate('/Auth')
   }, [isSignedIn])
 
   return (
