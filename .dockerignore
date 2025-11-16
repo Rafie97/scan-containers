@@ -1,0 +1,24 @@
+# Ignore local node_modules (we install inside the image)
+node_modules
+
+# Ignore logs and env files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.local
+
+# VCS and editor folders
+.git
+.gitignore
+.idea
+.vscode
+
+# OS files
+.DS_Store
+
+# Docker build output (if any)
+**/dist/build
+
+# Do not ignore the prebuilt dist directory - keep it in the build context
+# dist

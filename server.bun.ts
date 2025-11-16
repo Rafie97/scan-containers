@@ -7,7 +7,11 @@ import os, { type NetworkInterfaceInfo } from 'os';
 import path from 'path';
 import qrcode from 'qrcode';
 
-const PORT: number = 8081;
+// Bun server listens on this port
+const BUN_PORT: number = 8081;
+// The Expo / app dev server (Metro/Expo) will run on this port and the QR codes
+// should point to this app port.
+const APP_PORT: number = Number(process.env.APP_PORT) || 8082;
 // import.meta.dir is a Bun-specific variable for the current directory
 const DIST_PATH: string = path.join(import.meta.dir, 'dist');
 
@@ -23,23 +27,56 @@ const getLocalIpAddress = (): string => {
     if (!ifaceGroup) continue;
 
     for (const iface of ifaceGroup) {
-      // Skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
+      // Skip over internal addresses and prefer 192.168.* or 10.* addresses
+      if (iface.family === 'IPv4' && !iface.internal) {
+        if (iface.address.startsWith('192.168.') || iface.address.startsWith('10.')) {
+          return iface.address;
+        }
+      }
+    }
+  }
+
+  // Second pass for any IPv4 address if we didn't find a preferred one
+  for (const name of Object.keys(interfaces)) {
+    const ifaceGroup = interfaces[name];
+    if (!ifaceGroup) continue;
+
+    for (const iface of ifaceGroup) {
       if (iface.family === 'IPv4' && !iface.internal) {
         return iface.address;
       }
     }
   }
-  return '0.0.0.0'; // Fallback
+
+  return 'localhost'; // Fallback to localhost
 };
 
-const SERVER_IP: string = getLocalIpAddress();
-const MANIFEST_URL: string = `exp://${SERVER_IP}:${PORT}`;
+// Allow overriding the detected IP from the environment. This is useful when
+// running inside Docker where the container's IP (e.g. 172.x.x.x) is not the
+// desired address to embed in QR codes. You can set either:
+//  - REACT_NATIVE_PACKAGER_HOSTNAME (preferred) OR
+//  - SERVER_IP
+// If neither is set, we fall back to auto-detection.
+const SERVER_IP: string = process.env.SERVER_IP || getLocalIpAddress();
 
-console.log(`🚀 Server starting on http://${SERVER_IP}:${PORT}`);
-console.log(`Serving static files from: ${DIST_PATH}`);
+// Prefer REACT_NATIVE_PACKAGER_HOSTNAME when present (this is what Metro/Expo
+// uses to advertise the packager). Otherwise use SERVER_IP.
+const ADVERTISED_HOST: string = process.env.REACT_NATIVE_PACKAGER_HOSTNAME || SERVER_IP;
+
+console.log(`=========== Detected server IP address: ${SERVER_IP}`);
+
+// Define URLs for different platforms. Use APP_PORT for the app/dev server
+// that Expo / browsers will connect to. The Bun server itself continues
+// to listen on BUN_PORT (8081). The QR codes will point to ADVERTISED_HOST.
+const WEB_URL: string = `http://${ADVERTISED_HOST}:${APP_PORT}`;
+const EXPO_URL: string = `exp://${ADVERTISED_HOST}:${APP_PORT}`;
+
+console.log(`🚀 Bun server will listen on http://${SERVER_IP}:${BUN_PORT}`);
+console.log(`🌐 App / Expo dev server expected at ${WEB_URL}`);
+console.log(`📂 Serving static files from: ${DIST_PATH}`);
 
 Bun.serve({
-  port: PORT,
+  port: BUN_PORT,
   hostname: '0.0.0.0', // Listen on all network interfaces
 
   async fetch(req: Request): Promise<Response> {
@@ -49,11 +86,19 @@ Bun.serve({
     // 1. Handle the manifest API route for expo-updates
     if (pathname === '/api/manifest') {
       const platform: string | null = req.headers.get('expo-platform');
+      const userAgent: string | null = req.headers.get('user-agent');
       let manifestPath: string;
 
-      if (platform === 'android') {
+      // Check if this is a web request
+      if (userAgent?.includes('Mozilla')) {
+        // Serve web version
+        return Response.redirect(`${WEB_URL}/index.html`, 302);
+      }
+
+      // For native platforms, check for EAS builds first
+      if (pathname.includes('android-index.json') || platform === 'android') {
         manifestPath = path.join(DIST_PATH, 'android-index.json');
-      } else if (platform === 'ios') {
+      } else if (pathname.includes('ios-index.json') || platform === 'ios') {
         manifestPath = path.join(DIST_PATH, 'ios-index.json');
       } else {
         return new Response('Unsupported platform', { status: 404 });
@@ -65,7 +110,8 @@ Bun.serve({
 
     // 2. Handle the root path to show the QR code page
     if (pathname === '/') {
-      const qrCodeDataUrl: string = await qrcode.toDataURL(MANIFEST_URL);
+      const expoQRCode: string = await qrcode.toDataURL(EXPO_URL);
+      const webQRCode: string = await qrcode.toDataURL(WEB_URL);
       const htmlContent: string = `
         <html lang="en">
           <head>
@@ -73,22 +119,36 @@ Bun.serve({
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Local App Server (Bun)</title>
             <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f4f4f9; }
-              .container { text-align: center; padding: 2rem; background-color: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background-color: #f4f4f9; }
+              .container { text-align: center; padding: 2rem; background-color: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin: 2rem; }
               h1 { color: #333; }
               p { color: #666; }
+              .qr-section { margin: 2rem 0; }
               img { margin-top: 1rem; border: 5px solid #fff; border-radius: 8px; }
               code { background-color: #eee; padding: 0.2em 0.4em; border-radius: 4px; }
+              .divider { border-top: 1px solid #eee; margin: 2rem 0; }
             </style>
           </head>
           <body>
             <div class="container">
-              <h1>Local Expo App is Running</h1>
-              <p>Served with Bun!</p>
-              <p>Scan this QR code with the Expo Go app or your device's camera.</p>
-              <p>Your device must be on the same Wi-Fi network.</p>
-              <img src="${qrCodeDataUrl}" alt="QR Code" />
-              <p>Or open manually: <code>${MANIFEST_URL}</code></p>
+              <h1>Local App Server</h1>
+              <p>Served with Bun! 🚀</p>
+              
+              <div class="qr-section">
+                <h2>Web Version</h2>
+                <p>Scan to open in your mobile browser</p>
+                <img src="${webQRCode}" alt="Web QR Code" />
+                <p>Or open in browser: <code>${WEB_URL}</code></p>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="qr-section">
+                <h2>Expo Go Version</h2>
+                <p>Scan with Expo Go app for development</p>
+                <img src="${expoQRCode}" alt="Expo QR Code" />
+                <p>Or open in Expo Go: <code>${EXPO_URL}</code></p>
+              </div>
             </div>
           </body>
         </html>

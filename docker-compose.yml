@@ -1,16 +1,15 @@
 # This file orchestrates both the application server and a database.
 # To run: docker-compose up --build
 
-version: "3.8"
-
 services:
   # The Expo App Server
   app-server:
     # Build the image from the Dockerfile in the current directory
     build: .
     ports:
-      # Map port 8081 of the container to port 8081 on the host machine
+      # Map port   of the container to port 8081 on the host machine
       - "8081:8081"
+      - "8082:8082"
     environment:
       # Pass environment variables to your app here
       # Your React Native code can access these via a config file or process.env
@@ -18,6 +17,18 @@ services:
       - DATABASE_USER=myuser
       - DATABASE_PASSWORD=mypassword
       - DATABASE_NAME=mydatabase
+      - APP_PORT=8082
+      # Optional: set HOST_IP to your host machine's LAN IP (e.g. 192.168.8.180).
+      # When provided we'll pass it to Expo and the Bun server so QR codes and
+      # the Metro packager use the host IP instead of the container IP.
+      # Example: set HOST_IP=192.168.8.180 in an .env file or your shell before
+      # running `docker-compose up`.
+      - HOST_IP
+      # Use HOST_IP if provided, otherwise fall back to host.docker.internal which
+      # resolves to the host machine on Docker Desktop (Windows/Mac). This avoids
+      # having to explicitly set HOST_IP in many setups.
+      - SERVER_IP=${HOST_IP:-host.docker.internal}
+      - REACT_NATIVE_PACKAGER_HOSTNAME=${HOST_IP:-host.docker.internal}
     # This makes the app-server wait for the db to be ready before starting
     depends_on:
       db:
@@ -27,7 +38,9 @@ services:
 
   # The PostgreSQL Database
   db:
-    image: postgres:14-alpine
+    image: postgres:14
+    ports:
+      - "5432:5432"
     environment:
       - POSTGRES_USER=myuser
       - POSTGRES_PASSWORD=mypassword

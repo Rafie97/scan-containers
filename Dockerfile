@@ -14,18 +14,11 @@ RUN bun install
 # Copy the rest of the app's source code
 COPY . .
 
-# --- Build Stage ---
-# This stage exports the app into a static bundle
-FROM base AS builder
-
-# Export the app using expo-cli with our metro config
-# RUN set -eux; \
-#     echo "Starting expo export with custom metro config"; \
-#     export NODE_OPTIONS="--max-old-space-size=4096"; \
-#     export DEBUG=expo:*; \
-RUN    CI=1 NODE_ENV=production bunx expo export --platform web
-# This stage sets up a minimal server to serve the exported files.
-FROM builder AS production
+# We are using a prebuilt `dist` in the build context. Skip the export step
+# and use the base image (which already installed dependencies) as the
+# production base so `node_modules` and app files are present.
+# Production stage: minimal server to serve the exported files.
+FROM base AS production
 
 WORKDIR /app
 
@@ -40,9 +33,19 @@ RUN bun add qrcode
 
 # Copy our custom Bun server file
 COPY server.bun.ts .
+# Copy the start script that runs both processes
+COPY start.sh .
+RUN chmod +x ./start.sh
 
-# Expose the port the server will run on
+# Expose the ports the container will use:
+#  - 8081 for the Bun static/QR server
+#  - 8082 for the Expo / app dev server (Metro)
 EXPOSE 8081
+EXPOSE 8082
 
-# Command to start the server
-CMD ["bun", "run", "server.bun.ts"]
+# Start both the Expo dev server (via the npm script) and the Bun server.
+# We pass `-- --host 0.0.0.0` to ensure Expo listens on all interfaces inside
+# the container. The two processes run in the foreground; the shell will keep
+# the container alive as long as one of them runs. This is a simple approach
+# for local/dev usage. For production you might prefer a process manager.
+CMD ["sh", "-c", "./start.sh"]
