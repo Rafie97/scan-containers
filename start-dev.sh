@@ -40,4 +40,4 @@ export HOST_IP="$IP"
 
 echo "Starting docker-compose with HOST_IP=$HOST_IP"
 
-docker-compose up --build
+docker compose up --build

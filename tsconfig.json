@@ -29,5 +29,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-  ]
+, "server.node.mjs"  ]
 }

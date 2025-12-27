@@ -1,6 +1,6 @@
 # This file orchestrates both the application server and a database.
 # To run: docker-compose up --build
-
+name: expo-db-stack
 services:
   # The Expo App Server
   app-server:
@@ -29,6 +29,7 @@ services:
       # having to explicitly set HOST_IP in many setups.
       - SERVER_IP=${HOST_IP:-host.docker.internal}
       - REACT_NATIVE_PACKAGER_HOSTNAME=${HOST_IP:-host.docker.internal}
+      - EXPO_PUBLIC_API_URL=http://${HOST_IP:-host.docker.internal}:8081/api
     # This makes the app-server wait for the db to be ready before starting
     depends_on:
       db:
@@ -41,6 +42,8 @@ services:
     image: postgres:14
     ports:
       - "5432:5432"
+      
+    # TODO: make more secure with either keys or asking the user to make the password on setup
     environment:
       - POSTGRES_USER=myuser
       - POSTGRES_PASSWORD=mypassword

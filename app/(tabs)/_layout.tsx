@@ -1,12 +1,11 @@
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
 import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Ionicons } from '@expo/vector-icons';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -17,37 +16,76 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarShowLabel: false,
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="account"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Account',
+          tabBarIcon: ({ focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'account' : 'account-outline'}
+              size={35}
+              color="black"
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="map"
+        options={{
+          title: 'Map',
+          tabBarIcon: ({ focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'map-search' : 'map-search-outline'}
+              size={30}
+              color="black"
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="promo"
+        options={{
+          title: 'Promo',
+          tabBarIcon: ({ focused }) => (
+            <Ionicons name={focused ? 'pricetags' : 'pricetags-outline'} size={35} color="black" />
+          ),
         }}
       />
       <Tabs.Screen
         name="scan"
         options={{
           title: 'Scan',
-          tabBarIcon: ({ focused }) =>
+          tabBarIcon: ({ focused }) => (
             <>
-              {focused && (<FontAwesome name="barcode" size={20} color="black" />)}
+              {focused && <FontAwesome name="barcode" size={20} color="black" />}
               <Ionicons
                 name="scan-outline"
                 size={35}
-                style={{
-                  position: 'absolute',
-                }}
+                style={{ position: 'absolute' }}
               />
-
             </>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="cart"
+        options={{
+          title: 'Cart',
+          tabBarIcon: ({ focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'cart' : 'cart-outline'}
+              size={30}
+              color="black"
+            />
+          ),
         }}
       />
     </Tabs>

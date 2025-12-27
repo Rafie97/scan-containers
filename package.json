@@ -9,13 +9,16 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "export": "expo export"
+    "export": "expo export",
+    "server:node": "node server.node.mjs"
   },
   "dependencies": {
-    "@expo/vector-icons": "^15.0.2",
+    "@expo/vector-icons": "^15.0.3",
+    "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
+    "bcrypt": "^5.1.1",
     "expo": "~54.0.12",
     "expo-camera": "^17.0.8",
     "expo-cellular": "~8.0.7",
@@ -30,6 +33,7 @@
     "expo-symbols": "~1.0.7",
     "expo-system-ui": "~6.0.7",
     "expo-web-browser": "~15.0.8",
+    "pg": "^8.13.1",
     "qrcode": "^1.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -44,7 +48,6 @@
   "devDependencies": {
     "@types/qrcode": "^1.5.5",
     "@types/react": "~19.1.0",
-    "bun-types": "^1.2.23",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"
