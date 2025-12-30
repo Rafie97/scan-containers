@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { Redirect, useRouter } from 'expo-router';
-import { setupApi, setAuthToken } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { setupApi } from '@/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Redirect, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function AdminSetup() {
   const router = useRouter();
+  const { setSession } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -13,7 +15,6 @@ export default function AdminSetup() {
   const [loading, setLoading] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
   const [needsSetup, setNeedsSetup] = useState(false);
-  const [success, setSuccess] = useState(false);
 
   // Web-only
   if (Platform.OS !== 'web') {
@@ -65,13 +66,15 @@ export default function AdminSetup() {
 
     try {
       const { user, token } = await setupApi.initialize(username, password);
-      setAuthToken(token);
-      await AsyncStorage.setItem('auth_token', token);
+      await setSession(user, token);
 
-      setSuccess(true);
-      setTimeout(() => {
-        router.replace('/admin');
-      }, 1500);
+      // Store setup info for the welcome modal
+      await AsyncStorage.setItem('setup_complete', JSON.stringify({
+        username,
+        createdAt: new Date().toISOString(),
+      }));
+
+      router.replace('/admin');
     } catch (err: any) {
       setError(err.message || 'Setup failed');
     } finally {
@@ -91,18 +94,6 @@ export default function AdminSetup() {
 
   if (!needsSetup) {
     return null;
-  }
-
-  if (success) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.card}>
-          <Text style={styles.successIcon}>✓</Text>
-          <Text style={styles.title}>Setup Complete!</Text>
-          <Text style={styles.subtitle}>Redirecting to dashboard...</Text>
-        </View>
-      </View>
-    );
   }
 
   return (
@@ -239,11 +230,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     fontWeight: '600',
-  },
-  successIcon: {
-    fontSize: 60,
-    textAlign: 'center',
-    color: '#27ae60',
-    marginBottom: 20,
   },
 });

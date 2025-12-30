@@ -80,8 +80,24 @@ export const authApi = {
   me: () => fetchJson<{ user: AuthUser }>('/auth/me'),
 };
 
+// Credentials type for admin
+export interface DatabaseCredentials {
+  database: {
+    host: string;
+    port: number;
+    user: string;
+    name: string;
+    passwordHint: string;
+  };
+  note: string;
+  createdAt: string;
+}
+
 // Admin API
 export const adminApi = {
+  // Get database credentials info (for backup purposes)
+  getCredentials: () => fetchJson<DatabaseCredentials>('/admin/credentials'),
+
   // Items CRUD
   createItem: (item: Partial<Item>) =>
     fetchJson<Item>('/admin/items', {

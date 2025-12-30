@@ -1,13 +1,64 @@
-import React from 'react';
-import { Platform, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Platform, View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { Redirect, Stack, useRouter, usePathname } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Web-only admin layout
 export default function AdminLayout() {
   const { user, isLoading, isAuthenticated, isAdmin, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [setupInfo, setSetupInfo] = useState<{ username: string; createdAt: string } | null>(null);
+
+  // Check for setup completion flag
+  useEffect(() => {
+    const checkSetupComplete = async () => {
+      try {
+        const data = await AsyncStorage.getItem('setup_complete');
+        if (data) {
+          setSetupInfo(JSON.parse(data));
+          setShowWelcome(true);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    if (isAuthenticated && isAdmin) {
+      checkSetupComplete();
+    }
+  }, [isAuthenticated, isAdmin]);
+
+  const dismissWelcome = async () => {
+    await AsyncStorage.removeItem('setup_complete');
+    setShowWelcome(false);
+  };
+
+  const downloadCredentials = () => {
+    const content = `# Scan App - Setup Credentials
+# Created: ${setupInfo?.createdAt ? new Date(setupInfo.createdAt).toLocaleString() : 'Unknown'}
+
+Admin Username: ${setupInfo?.username || 'Unknown'}
+Server URL: ${window.location.origin}
+
+## Database Credentials
+Your database credentials were auto-generated and saved to the .env file on your server.
+Location: /path/to/your/project/.env
+
+IMPORTANT: Keep the .env file backed up securely for recovery purposes.
+
+## Recovery
+If you lose access to the .env file, see the project documentation for recovery options.
+`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'scanapp-credentials.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Redirect non-web users
   if (Platform.OS !== 'web') {
@@ -75,6 +126,36 @@ export default function AdminLayout() {
           <Stack.Screen name="preview" />
         </Stack>
       </View>
+
+      <Modal visible={showWelcome} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalIcon}>✓</Text>
+            <Text style={styles.modalTitle}>Setup Complete!</Text>
+            <Text style={styles.modalSubtitle}>
+              Your admin account has been created successfully.
+            </Text>
+
+            <View style={styles.infoBox}>
+              <Text style={styles.infoTitle}>Important: Save Your Credentials</Text>
+              <Text style={styles.infoText}>
+                Your database credentials were auto-generated and saved to the .env file on your server.
+              </Text>
+              <Text style={styles.infoText}>
+                Download a backup of your setup information for your records.
+              </Text>
+            </View>
+
+            <TouchableOpacity style={styles.downloadBtn} onPress={downloadCredentials}>
+              <Text style={styles.downloadBtnText}>Download Credentials</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.dismissBtn} onPress={dismissWelcome}>
+              <Text style={styles.dismissBtnText}>Continue to Dashboard</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -161,5 +242,80 @@ const styles = StyleSheet.create({
   main: {
     flex: 1,
     padding: 30,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    width: '90%',
+    maxWidth: 450,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 40,
+  },
+  modalIcon: {
+    fontSize: 64,
+    textAlign: 'center',
+    color: '#27ae60',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#1a1a2e',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 24,
+  },
+  infoBox: {
+    backgroundColor: '#e8f4fd',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 24,
+    borderLeftWidth: 4,
+    borderLeftColor: '#0073FE',
+  },
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a1a2e',
+    marginBottom: 8,
+  },
+  infoText: {
+    fontSize: 13,
+    color: '#555',
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  downloadBtn: {
+    backgroundColor: '#27ae60',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  downloadBtnText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  dismissBtn: {
+    backgroundColor: '#0073FE',
+    padding: 16,
+    borderRadius: 8,
+  },
+  dismissBtnText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

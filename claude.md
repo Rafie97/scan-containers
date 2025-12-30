@@ -1,245 +1,188 @@
 # Scan Containers - Grocery Store Shopping Assistant
 
-A cross-platform mobile/web application that allows customers to scan product barcodes, browse inventory, manage carts, and navigate store maps. Includes a web-based admin portal for store management.
+A self-hosted mobile/web app for scanning product barcodes, managing inventory, and navigating store layouts. Built for homelab deployment on NixOS.
+
+## Deployment Options
+
+### NixOS Homelab (Recommended)
+
+Add to your flake inputs and enable the service:
+
+```nix
+# flake.nix
+{
+  inputs.scanapp.url = "github:youruser/scan-containers";
+}
+
+# configuration.nix
+{ config, ... }: {
+  imports = [ inputs.scanapp.nixosModules.scanapp ];
+
+  services.scanapp = {
+    enable = true;
+    domain = "shop.home.local";
+    jwtSecretFile = "/run/secrets/scanapp-jwt";
+  };
+}
+```
+
+Generate the JWT secret and rebuild:
+
+```bash
+openssl rand -base64 48 | sudo tee /run/secrets/scanapp-jwt
+sudo nixos-rebuild switch
+```
+
+**What gets deployed automatically:**
+- PostgreSQL database (socket auth, no password needed)
+- systemd service with security hardening
+- nginx reverse proxy
+- Avahi mDNS (access via `shop.home.local` from any device on LAN)
+- Firewall rules
+
+### Docker (Non-NixOS)
+
+Build the Docker image from Nix (ensures consistency):
+
+```bash
+nix build .#docker-image
+docker load < result
+docker run -p 8081:8081 -p 8082:8082 \
+  -e JWT_SECRET="$(openssl rand -base64 48)" \
+  -e DATABASE_HOST=your-postgres-host \
+  -e DATABASE_USER=scanapp \
+  -e DATABASE_PASSWORD=yourpassword \
+  -e DATABASE_NAME=scanapp \
+  scanapp:latest
+```
+
+### Development
+
+```bash
+nix develop        # Enter dev shell with node, npm, postgres tools
+npm install        # Install dependencies
+npm run server:node  # Start API server (needs postgres)
+npx expo start --port 8082  # Start Expo dev server
+```
+
+## First-Time Setup
+
+After deployment, access the admin setup wizard:
+
+1. Open `http://shop.home.local/admin/setup` (or your configured domain)
+2. Create the initial admin account
+3. Start adding inventory, promotions, and store maps
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│  flake.nix (source of truth)                │
+│  ├── packages.scanapp-server                │
+│  ├── packages.docker-image                  │
+│  └── nixosModules.scanapp                   │
+└─────────────────────────────────────────────┘
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+   NixOS Native            Docker Image
+   (homelab)               (other Linux)
+```
 
 ## Tech Stack
 
-**Frontend:**
-- Expo (React Native) v54 with expo-router v6 (file-based routing)
-- React 19.1.0
-- State management: React Context + useReducer pattern
-- expo-camera for barcode scanning
-- @react-native-async-storage/async-storage for local storage
-
-**Backend:**
-- Node.js HTTP server (server.node.mjs)
-- PostgreSQL 14
-- JWT authentication with bcrypt password hashing
-- QR code generation for device connection
-
-**DevOps:**
-- Docker + docker-compose
-- Expo dev server on port 8082
-- Node.js API server on port 8081
+| Layer | Technology |
+|-------|------------|
+| Frontend | Expo (React Native) v54, React 19, expo-router v6 |
+| Backend | Node.js HTTP server, PostgreSQL 14 |
+| Auth | JWT + bcrypt, role-based (admin/manager/user) |
+| Deployment | NixOS module, Nix-built Docker image |
 
 ## Project Structure
 
 ```
 app/
-├── (tabs)/                    # User-facing mobile app (tab navigation)
-│   ├── _layout.tsx           # Tab navigation config (6 tabs)
-│   ├── index.tsx             # Redirects to /scan
-│   ├── scan.tsx              # Barcode scanner
-│   ├── promo.tsx             # Promotional items
-│   ├── map.tsx               # Store map navigation
-│   ├── cart.tsx              # Shopping cart
-│   └── account.tsx           # User profile/wishlists/receipts
-├── admin/                     # Web-only admin portal
-│   ├── _layout.tsx           # Admin sidebar navigation
-│   ├── login.tsx             # Admin authentication
-│   ├── setup.tsx             # First-time admin setup wizard
-│   ├── index.tsx             # Dashboard
-│   ├── inventory.tsx         # Product management
-│   ├── promos.tsx            # Promotion management
-│   ├── map.tsx               # Store map editor
-│   ├── recipes.tsx           # Recipe management
-│   ├── users.tsx             # User management
-│   └── preview.tsx           # Device preview
-└── _layout.tsx               # Root layout with providers
+├── (tabs)/           # Mobile app screens (scan, cart, map, promos, account)
+└── admin/            # Web admin portal (inventory, promos, users, maps)
 
-contexts/
-└── AuthContext.tsx           # Authentication state (login/logout/session)
+server.node.mjs       # API server (40+ endpoints)
+db/schema.sql         # PostgreSQL schema
 
-store/
-├── index.tsx                 # StateProvider component
-├── reducer.ts                # Cart and app state reducer
-└── types.ts                  # State and action type definitions
+nix/
+├── package.nix       # Server package (buildNpmPackage)
+├── module.nix        # NixOS module (systemd, postgres, nginx, avahi)
+└── docker-image.nix  # Docker image derivation
 
-services/
-├── api.ts                    # Centralized API client (all endpoints)
-└── index.ts                  # Service exports
-
-models/
-├── Item.ts, User.ts, Receipt.ts, Review.ts, Aisle.ts, etc.
-└── index.ts                  # Type definitions and exports
-
-db/
-└── schema.sql                # PostgreSQL schema (14+ tables)
-
-server.node.mjs               # Main Node.js HTTP server
-docker-compose.yml            # Container orchestration
-Dockerfile                    # App container definition
+flake.nix             # Nix flake
 ```
 
-## How It Works
-
-### User Flow
-1. User opens the app and scans product barcodes with their phone camera
-2. App looks up product info via API and displays details (price, reviews, location)
-3. User can add items to cart, view promotions, and check store maps
-4. Cart persists locally and syncs with backend when authenticated
-
-### Admin Flow
-1. First-time setup creates initial admin account via `/admin/setup`
-2. Admin logs in at `/admin/login` (JWT stored in AsyncStorage)
-3. Admin manages inventory, promotions, store maps, and users
-4. Changes reflect immediately in the customer-facing app
-
-### Authentication
-- JWT tokens with 7-day expiration
-- Roles: `admin`, `manager`, `user`
-- Admin routes protected by role check in AuthContext
-- Passwords hashed with bcrypt
-
-### API Server (server.node.mjs)
-- Serves QR code landing page at root (for connecting mobile devices)
-- All API routes under `/api/*`
-- Key endpoint groups:
-  - `/api/setup/*` - Initial admin setup
-  - `/api/auth/*` - Login/logout/session
-  - `/api/items/*` - Product CRUD
-  - `/api/cart/*` - Cart management
-  - `/api/map/*` - Store layout
-  - `/api/promos/*` - Promotions
-  - `/api/users/*` - User management
-
-## Running the Project
-
-### Development (Docker)
-```bash
-./start-dev.sh
-```
-This starts:
-- PostgreSQL container (port 5432)
-- Node.js API server (port 8081)
-- Expo dev server (port 8082)
-
-### Production
-```bash
-./start.sh
-```
-
-### Manual Commands
-```bash
-# Install dependencies
-npm install
-
-# Start API server only
-npm run server:node
-
-# Start Expo dev server
-npx expo start --port 8082
-```
-
-### First-Time Setup
-1. Run the containers with `./start-dev.sh`
-2. Navigate to `http://localhost:8082/admin/setup`
-3. Create the initial admin account
-4. Log in at `/admin/login`
-
-## Database
-
-PostgreSQL schema in `db/schema.sql` includes:
-- `users` - User accounts with roles
-- `items` - Product catalog
-- `item_prices` - Price history tracking
-- `promotions` - Active promos
-- `carts` / `cart_items` - Shopping carts
-- `receipts` / `receipt_items` - Purchase history
-- `reviews` - Product reviews
-- `wishlists` / `wishlist_items` - User wishlists
-- `aisles` / `aisle_items` - Store layout mapping
-- `recipes` / `recipe_ingredients` - Recipe management
-
-## Current Implementation Status
-
-### Complete
-- Barcode scanner with camera integration
-- Authentication system (JWT + roles)
-- API server with 40+ endpoints
-- Database schema with sample data
-- Admin: login, setup, inventory, promos, users, map editor
-- Promo page (user-facing)
-- Docker containerization
-
-### Incomplete (Placeholders)
-- `cart.tsx` - Shows placeholder text only, needs cart display
-- `account.tsx` - Shows placeholder text only, needs profile/wishlist/receipt UI
-- `map.tsx` (user-facing) - Needs store layout display
-- `recipes.tsx` (admin) - Has TODO comment, needs API integration
-
-### Missing UI (API Exists)
-- Wishlist management pages
-- Receipt viewing pages
-- Review display on products
-- Price history visualization
-
-## Key Files to Know
+## Key Files
 
 | File | Purpose |
 |------|---------|
-| `server.node.mjs` | All backend logic, API routes, auth |
-| `services/api.ts` | Frontend API client, all endpoint calls |
-| `contexts/AuthContext.tsx` | Auth state, login/logout functions |
-| `store/reducer.ts` | Cart state management logic |
-| `db/schema.sql` | Complete database structure |
-| `app/(tabs)/_layout.tsx` | Tab navigation configuration |
-| `app/admin/_layout.tsx` | Admin sidebar navigation |
+| `server.node.mjs` | API server, all backend logic |
+| `services/api.ts` | Frontend API client |
+| `contexts/AuthContext.tsx` | Authentication state |
+| `db/schema.sql` | Database schema |
+| `nix/module.nix` | NixOS service definition |
 
-## NixOS Deployment (compose.nix)
+## API Endpoints
 
-The `compose.nix` file is a NixOS module auto-generated by [compose2nix](https://github.com/aksiksi/compose2nix). It converts the docker-compose.yml into native NixOS/systemd configuration, allowing the containers to run as managed systemd services.
+All routes under `/api/*`:
 
-### What It Defines
+- `/api/setup/*` - Initial admin setup
+- `/api/auth/*` - Login/logout/session
+- `/api/items/*` - Product CRUD
+- `/api/cart/*` - Cart management
+- `/api/map/*` - Store layout
+- `/api/promos/*` - Promotions
+- `/api/users/*` - User management
 
-**Docker Configuration:**
-- Enables Docker with auto-pruning
-- Uses Docker as the OCI container backend
+## NixOS Module Options
 
-**Containers:**
-1. `expo-db-stack-app-server` - The app server container
-   - Ports: 8081 (API), 8082 (Expo)
-   - Environment: Database credentials, hostname config
-   - Depends on the database container
+| Option | Default | Description |
+|--------|---------|-------------|
+| `services.scanapp.enable` | `false` | Enable the service |
+| `services.scanapp.domain` | `"shop.local"` | Domain for nginx/avahi |
+| `services.scanapp.jwtSecretFile` | required | Path to JWT secret |
+| `services.scanapp.ports.api` | `8081` | API port |
+| `services.scanapp.ports.app` | `8082` | Frontend port |
+| `services.scanapp.database.createLocally` | `true` | Auto-create PostgreSQL |
+| `services.scanapp.nginx.enable` | `true` | Enable reverse proxy |
+| `services.scanapp.avahi.enable` | `true` | Enable mDNS |
 
-2. `expo-db-stack-db` - PostgreSQL 14 database
-   - Port: 5432
-   - Health checks configured
-   - Persistent volume for data
+## Secrets Management
 
-**Infrastructure:**
-- `expo-db-stack_app-network` - Bridge network for container communication
-- `expo-db-stack_postgres_data` - Named volume for database persistence
-- Build service that builds the app-server image from the Dockerfile
-
-### Systemd Integration
-
-Each container becomes a systemd service:
-- `docker-expo-db-stack-app-server.service`
-- `docker-expo-db-stack-db.service`
-
-Root target `docker-compose-expo-db-stack-root.target` manages all services together.
-
-### Usage on NixOS
-
+**SOPS (recommended):**
 ```nix
-# In your NixOS configuration (e.g., /etc/nixos/configuration.nix)
-{ config, pkgs, ... }:
-{
-  imports = [
-    ./path/to/compose.nix
-  ];
-}
+sops.secrets."scanapp/jwt-secret".owner = "scanapp";
+services.scanapp.jwtSecretFile = config.sops.secrets."scanapp/jwt-secret".path;
 ```
 
-Then rebuild:
+**agenix:**
+```nix
+age.secrets.scanapp-jwt = { file = ./secrets/scanapp-jwt.age; owner = "scanapp"; };
+services.scanapp.jwtSecretFile = config.age.secrets.scanapp-jwt.path;
+```
+
+## Service Management
+
 ```bash
-sudo nixos-rebuild switch
+# Check status
+systemctl status scanapp-server
+
+# View logs
+journalctl -u scanapp-server -f
+
+# Restart
+sudo systemctl restart scanapp-server
+
+# Check database
+sudo -u postgres psql -d scanapp -c '\dt'
 ```
 
-## Environment
+## Implementation Status
 
-- Node.js 20+
-- PostgreSQL 14
-- Expo SDK 54
-- Ports: 8081 (API), 8082 (Expo), 5432 (Postgres)
+**Complete:** Barcode scanner, auth system, API server, admin portal (inventory, promos, users, map editor)
+
+**Incomplete:** Cart display, account page, user-facing map, recipe management

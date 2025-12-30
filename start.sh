@@ -7,6 +7,10 @@
 export CI=1
 export EXPO_OFFLINE=1
 
+# Log database connection info (without password)
+echo "Database: ${DATABASE_NAME:-mydatabase} @ ${DATABASE_HOST:-localhost}"
+echo "Database User: ${DATABASE_USER:-myuser}"
+
 echo "Starting Expo dev server on port ${APP_PORT:-8082} (mode: lan)"
 # Start Expo/Metro in background
 npm run start -- --lan &
