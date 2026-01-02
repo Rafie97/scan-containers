@@ -9,6 +9,7 @@ interface AuthContextType {
   isAdmin: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  setSession: (user: AuthUser, token: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -58,6 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const setSession = useCallback(async (user: AuthUser, token: string) => {
+    setAuthToken(token);
+    await AsyncStorage.setItem(TOKEN_KEY, token);
+    setUser(user);
+  }, []);
+
   const value: AuthContextType = {
     user,
     isLoading,
@@ -65,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAdmin: user?.role === 'admin',
     login,
     logout,
+    setSession,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

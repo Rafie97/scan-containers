@@ -425,6 +425,30 @@ const apiRoutes = {
     sendJson(res, result.rows[0]);
   },
 
+  // GET /api/admin/credentials - Get database credentials (admin only)
+  // Used by admin dashboard to display/download backup credentials
+  'GET /api/admin/credentials': async (req, res) => {
+    const user = await requireAuth(req, res, 'admin');
+    if (!user) return;
+
+    // Return non-sensitive connection info for backup purposes
+    // Password is masked - full credentials are in the .env file on host
+    const credentials = {
+      database: {
+        host: process.env.DATABASE_HOST || 'localhost',
+        port: 5432,
+        user: process.env.DATABASE_USER || 'scanapp',
+        name: process.env.DATABASE_NAME || 'scanapp_db',
+        // Show masked password hint - full password is in .env file
+        passwordHint: (process.env.DATABASE_PASSWORD || '').substring(0, 4) + '****',
+      },
+      note: 'Full credentials are stored in the .env file on your server. Keep that file backed up securely.',
+      createdAt: new Date().toISOString(),
+    };
+
+    sendJson(res, credentials);
+  },
+
   // PUT /api/admin/map - Save store map (admin only)
   'PUT /api/admin/map': async (req, res) => {
     const user = await requireAuth(req, res, 'admin');
