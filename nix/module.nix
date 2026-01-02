@@ -20,19 +20,21 @@ in {
       type = types.str;
       default = "shop.local";
       example = "shop.home.local";
-      description = "Domain for the app (used with nginx and avahi)";
+      description = "Domain for the shopping web app";
+    };
+
+    connectDomain = mkOption {
+      type = types.str;
+      default = "connect.local";
+      example = "connect.home.local";
+      description = "Domain for the QR code / connection page (displayed in-store)";
     };
 
     ports = {
       api = mkOption {
         type = types.port;
         default = 8081;
-        description = "Port for the API server";
-      };
-      app = mkOption {
-        type = types.port;
-        default = 8082;
-        description = "Port for the Expo/frontend server";
+        description = "Port for the API/connect server";
       };
     };
 
@@ -237,20 +239,51 @@ in {
       recommendedOptimisation = true;
       recommendedGzipSettings = true;
 
+      # Shopping app - static files
       virtualHosts.${cfg.domain} = {
         forceSSL = cfg.nginx.enableSSL;
         enableACME = cfg.nginx.enableSSL;
 
-        locations."/" = {
-          proxyPass = "http://127.0.0.1:${toString cfg.ports.app}";
+        root = "${cfg.package}/lib/scanapp/dist";
+
+        # API routes - proxy to Node server
+        locations."/api/" = {
+          proxyPass = "http://127.0.0.1:${toString cfg.ports.api}";
           proxyWebsockets = true;
           extraConfig = ''
-            proxy_read_timeout 86400;
+            proxy_read_timeout 60;
           '';
         };
 
-        locations."/api" = {
+        # Static assets - cache aggressively
+        locations."/_expo/" = {
+          extraConfig = ''
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+          '';
+        };
+
+        locations."/assets/" = {
+          extraConfig = ''
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+          '';
+        };
+
+        # Web app - serve static files, fallback to index.html for SPA routing
+        locations."/" = {
+          tryFiles = "$uri $uri/ /index.html";
+        };
+      };
+
+      # Connect page - QR codes for in-store display
+      virtualHosts.${cfg.connectDomain} = {
+        forceSSL = cfg.nginx.enableSSL;
+        enableACME = cfg.nginx.enableSSL;
+
+        locations."/" = {
           proxyPass = "http://127.0.0.1:${toString cfg.ports.api}";
+          proxyWebsockets = true;
           extraConfig = ''
             proxy_read_timeout 60;
           '';
@@ -262,7 +295,6 @@ in {
     networking.firewall = mkIf cfg.openFirewall {
       allowedTCPPorts = [
         cfg.ports.api
-        cfg.ports.app
       ] ++ lib.optionals cfg.nginx.enable [ 80 443 ];
     };
 
@@ -276,23 +308,56 @@ in {
         addresses = true;
         userServices = true;
       };
-      extraServiceFiles.scanapp = ''
-        <?xml version="1.0" standalone='no'?>
-        <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
-        <service-group>
-          <name>Scan Containers</name>
-          <service>
-            <type>_http._tcp</type>
-            <port>${toString cfg.ports.app}</port>
-            <txt-record>path=/</txt-record>
-            <txt-record>version=0.1.0</txt-record>
-          </service>
-          <service>
-            <type>_scanapp._tcp</type>
-            <port>${toString cfg.ports.api}</port>
-            <txt-record>api=true</txt-record>
-          </service>
-        </service-group>
+      extraServiceFiles = {
+        scanapp-shop = ''
+          <?xml version="1.0" standalone='no'?>
+          <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+          <service-group>
+            <name>Scan App - Shop</name>
+            <service>
+              <type>_http._tcp</type>
+              <port>80</port>
+              <txt-record>path=/</txt-record>
+              <txt-record>type=shop</txt-record>
+            </service>
+          </service-group>
+        '';
+        scanapp-connect = ''
+          <?xml version="1.0" standalone='no'?>
+          <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+          <service-group>
+            <name>Scan App - Connect</name>
+            <service>
+              <type>_http._tcp</type>
+              <port>80</port>
+              <txt-record>path=/</txt-record>
+              <txt-record>type=connect</txt-record>
+            </service>
+          </service-group>
+        '';
+      };
+    };
+
+    # Publish additional hostnames via mDNS CNAMEs
+    systemd.services.scanapp-avahi-cnames = mkIf cfg.avahi.enable {
+      description = "Publish Scan App mDNS CNAMEs";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "avahi-daemon.service" ];
+      requires = [ "avahi-daemon.service" ];
+
+      serviceConfig = {
+        Type = "simple";
+        Restart = "always";
+        RestartSec = 5;
+      };
+
+      # Extract hostname from domain (e.g., "shop.home.local" -> "shop")
+      script = let
+        shopHost = builtins.head (lib.splitString "." cfg.domain);
+        connectHost = builtins.head (lib.splitString "." cfg.connectDomain);
+      in ''
+        exec ${pkgs.avahi}/bin/avahi-publish -a -R ${shopHost}.local $(hostname -I | awk '{print $1}') &
+        exec ${pkgs.avahi}/bin/avahi-publish -a -R ${connectHost}.local $(hostname -I | awk '{print $1}')
       '';
     };
   });

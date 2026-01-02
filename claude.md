@@ -81,11 +81,14 @@ docker run -p 8081:8081 -p 8082:8082 \
 ### Development
 
 ```bash
-nix develop        # Enter dev shell with node, npm, postgres tools
-npm install        # Install dependencies
-npm run server:node  # Start API server (needs postgres)
+nix develop              # Enter dev shell with node, npm, postgres tools
+docker-compose up -d db  # Start dev database (port 5433)
+npm install              # Install dependencies
+npm run server:node      # Start API server
 npx expo start --port 8082  # Start Expo dev server
 ```
+
+Development uses port 5433 for PostgreSQL to avoid conflicts with system postgres.
 
 ## First-Time Setup
 

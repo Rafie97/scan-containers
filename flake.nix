@@ -46,7 +46,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             # Node.js development
-            nodejs_20
+            nodejs_22
             nodePackages.npm
 
             # Database
@@ -62,11 +62,11 @@
           ];
 
           shellHook = ''
-            # Load .env for database credentials
+            # Load .env for database credentials (dev uses port 5433 to avoid system postgres conflict)
             if [ -f .env ]; then
               export $(grep -v '^#' .env | xargs)
               export PGHOST=localhost
-              export PGPORT=5432
+              export PGPORT=5433
               export PGUSER="$DATABASE_USER"
               export PGPASSWORD="$DATABASE_PASSWORD"
               export PGDATABASE="$DATABASE_NAME"

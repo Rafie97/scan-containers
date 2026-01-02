@@ -2,7 +2,7 @@
 # Builds the scanapp-server as a Nix package
 { lib
 , buildNpmPackage
-, nodejs_20
+, nodejs_22
 , makeWrapper
 }:
 
@@ -18,13 +18,17 @@ buildNpmPackage rec {
   # Allow npm to write to cache during install
   makeCacheWritable = true;
 
-  # Don't run npm build (no build script needed for this server)
-  dontNpmBuild = true;
-
-  # Use Node.js 20
-  nodejs = nodejs_20;
+  # Use Node.js 22
+  nodejs = nodejs_22;
 
   nativeBuildInputs = [ makeWrapper ];
+
+  # Build the Expo web app
+  buildPhase = ''
+    runHook preBuild
+    npx expo export --platform web --output-dir dist
+    runHook postBuild
+  '';
 
   installPhase = ''
     runHook preInstall
@@ -36,8 +40,11 @@ buildNpmPackage rec {
     cp server.node.mjs $out/lib/scanapp/
     cp -r db $out/lib/scanapp/
 
+    # Copy built web app
+    cp -r dist $out/lib/scanapp/
+
     # Create wrapper script that sets up the environment
-    makeWrapper ${nodejs_20}/bin/node $out/bin/scanapp-server \
+    makeWrapper ${nodejs_22}/bin/node $out/bin/scanapp-server \
       --add-flags "$out/lib/scanapp/server.node.mjs" \
       --set NODE_ENV production
 

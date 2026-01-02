@@ -11,7 +11,7 @@ pkgs.dockerTools.buildLayeredImage {
 
   contents = with pkgs; [
     # Runtime dependencies
-    nodejs_20
+    nodejs_22
     coreutils
     bash
 
