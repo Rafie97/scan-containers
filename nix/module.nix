@@ -181,7 +181,6 @@ in {
         DATABASE_HOST = cfg.database.host;
         DATABASE_NAME = cfg.database.name;
         DATABASE_USER = cfg.database.user;
-        APP_PORT = toString cfg.ports.app;
       } // lib.optionalAttrs cfg.database.createLocally {
         # For local socket connections with peer auth, no password needed
         DATABASE_PASSWORD = "";
@@ -338,12 +337,15 @@ in {
       };
     };
 
-    # Publish additional hostnames via mDNS CNAMEs
+    # Publish additional hostnames via mDNS
     systemd.services.scanapp-avahi-cnames = mkIf cfg.avahi.enable {
-      description = "Publish Scan App mDNS CNAMEs";
+      description = "Publish Scan App mDNS hostnames";
       wantedBy = [ "multi-user.target" ];
-      after = [ "avahi-daemon.service" ];
+      after = [ "avahi-daemon.service" "network-online.target" ];
       requires = [ "avahi-daemon.service" ];
+      wants = [ "network-online.target" ];
+
+      path = [ pkgs.avahi pkgs.iproute2 pkgs.gawk ];
 
       serviceConfig = {
         Type = "simple";
@@ -351,13 +353,18 @@ in {
         RestartSec = 5;
       };
 
-      # Extract hostname from domain (e.g., "shop.home.local" -> "shop")
       script = let
         shopHost = builtins.head (lib.splitString "." cfg.domain);
         connectHost = builtins.head (lib.splitString "." cfg.connectDomain);
       in ''
-        exec ${pkgs.avahi}/bin/avahi-publish -a -R ${shopHost}.local $(hostname -I | awk '{print $1}') &
-        exec ${pkgs.avahi}/bin/avahi-publish -a -R ${connectHost}.local $(hostname -I | awk '{print $1}')
+        IP=$(ip -4 addr show | grep -oP '(?<=inet\s)192\.\d+\.\d+\.\d+' | head -1)
+        if [ -z "$IP" ]; then
+          IP=$(hostname -I | awk '{print $1}')
+        fi
+        echo "Publishing mDNS hostnames for IP: $IP"
+        avahi-publish -a -R ${shopHost}.local "$IP" &
+        avahi-publish -a -R ${connectHost}.local "$IP" &
+        wait
       '';
     };
   });
