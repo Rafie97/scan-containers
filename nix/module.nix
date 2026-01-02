@@ -72,10 +72,22 @@ in {
     };
 
     jwtSecretFile = mkOption {
-      type = types.path;
+      type = types.nullOr types.path;
+      default = null;
       description = ''
         Path to file containing JWT secret for authentication.
-        Should be managed by SOPS: config.sops.secrets."scanapp/jwt-secret".path
+        If null and autoGenerateJwtSecret is true, a secret will be auto-generated.
+        For production, use SOPS: config.sops.secrets."scanapp/jwt-secret".path
+      '';
+    };
+
+    autoGenerateJwtSecret = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Automatically generate a JWT secret if jwtSecretFile is not specified.
+        The secret is stored persistently in the data directory.
+        Set to false if you want to manage secrets with SOPS/agenix.
       '';
     };
 
@@ -115,7 +127,12 @@ in {
     };
   };
 
-  config = mkIf cfg.enable {
+  config = mkIf cfg.enable (let
+    # Determine JWT secret path: user-provided or auto-generated
+    jwtSecretPath = if cfg.jwtSecretFile != null
+      then cfg.jwtSecretFile
+      else "${cfg.storage.dataDir}/jwt-secret";
+  in {
     # Ensure the overlay is applied so pkgs.scanapp-server exists
     nixpkgs.overlays = [
       (final: prev: {
@@ -152,7 +169,7 @@ in {
     # Main systemd service
     systemd.services.scanapp-server = {
       description = "Scan Containers API Server";
-      documentation = [ "https://github.com/youruser/scan-containers" ];
+      documentation = [ "https://github.com/Rafie97/scan-containers" ];
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ] ++ lib.optional cfg.database.createLocally "postgresql.service";
       requires = lib.optional cfg.database.createLocally "postgresql.service";
@@ -199,9 +216,16 @@ in {
         AmbientCapabilities = "";
       };
 
-      # Load JWT secret from file and start the server
+      # Generate JWT secret if needed, then start the server
       script = ''
-        export JWT_SECRET="$(cat ${cfg.jwtSecretFile})"
+        # Auto-generate JWT secret if it doesn't exist
+        if [ ! -f "${jwtSecretPath}" ] && [ "${toString cfg.autoGenerateJwtSecret}" = "1" ]; then
+          echo "Generating JWT secret..."
+          ${pkgs.openssl}/bin/openssl rand -base64 48 > "${jwtSecretPath}"
+          chmod 600 "${jwtSecretPath}"
+        fi
+
+        export JWT_SECRET="$(cat ${jwtSecretPath})"
         exec ${cfg.package}/bin/scanapp-server
       '';
     };
@@ -271,5 +295,5 @@ in {
         </service-group>
       '';
     };
-  };
+  });
 }

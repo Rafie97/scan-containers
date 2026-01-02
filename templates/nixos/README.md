@@ -4,37 +4,50 @@ This template shows how to deploy Scan Containers on a NixOS server **without Do
 
 ## Quick Start
 
-1. Add the flake input to your NixOS configuration:
+### Flake-based NixOS
 
 ```nix
+# flake.nix
 {
-  inputs.scanapp.url = "github:youruser/scan-containers";
-}
-```
+  inputs.scanapp.url = "github:Rafie97/scan-containers";
 
-2. Import the module and enable the service:
-
-```nix
-{ config, ... }: {
-  imports = [ inputs.scanapp.nixosModules.scanapp ];
-
-  services.scanapp = {
-    enable = true;
-    domain = "shop.home.local";
-    jwtSecretFile = "/run/secrets/scanapp-jwt";
+  outputs = { nixpkgs, scanapp, ... }: {
+    nixosConfigurations.yourhost = nixpkgs.lib.nixosSystem {
+      modules = [
+        scanapp.nixosModules.scanapp
+        {
+          services.scanapp = {
+            enable = true;
+            domain = "shop.home.local";
+          };
+        }
+      ];
+    };
   };
 }
 ```
 
-3. Create the JWT secret:
+### Traditional configuration.nix (no flakes)
 
-```bash
-# Generate and save JWT secret
-openssl rand -base64 48 | sudo tee /run/secrets/scanapp-jwt > /dev/null
-sudo chmod 600 /run/secrets/scanapp-jwt
+```nix
+# /etc/nixos/configuration.nix
+{ config, pkgs, ... }:
+let
+  scanapp = builtins.fetchGit {
+    url = "https://github.com/Rafie97/scan-containers";
+    ref = "main";
+  };
+in {
+  imports = [ "${scanapp}/nix/module.nix" ];
+
+  services.scanapp = {
+    enable = true;
+    domain = "shop.home.local";
+  };
+}
 ```
 
-4. Rebuild and switch:
+Then rebuild:
 
 ```bash
 sudo nixos-rebuild switch
@@ -45,6 +58,7 @@ sudo nixos-rebuild switch
 The NixOS module automatically sets up:
 
 - **PostgreSQL** database with the `scanapp` user and database
+- **JWT secret** auto-generated on first start
 - **systemd service** running the Node.js API server
 - **nginx** reverse proxy at your configured domain
 - **Avahi/mDNS** for `.local` domain discovery
@@ -62,36 +76,36 @@ If using Avahi, any device on your local network can access `shop.home.local`.
 
 ## Secrets Management
 
-### Option 1: Manual (shown above)
+By default, the JWT secret is **auto-generated** on first start and stored in `/var/lib/scanapp/jwt-secret`. This is fine for most homelab setups.
 
-```bash
-openssl rand -base64 48 | sudo tee /run/secrets/scanapp-jwt > /dev/null
-```
+For production or multi-machine deployments, you can use SOPS or agenix:
 
-### Option 2: SOPS (recommended for production)
+### SOPS
 
 ```nix
 {
-  sops.secrets."scanapp/jwt-secret" = {
-    owner = "scanapp";
-    group = "scanapp";
-  };
+  sops.secrets."scanapp/jwt-secret".owner = "scanapp";
 
-  services.scanapp.jwtSecretFile = config.sops.secrets."scanapp/jwt-secret".path;
+  services.scanapp = {
+    autoGenerateJwtSecret = false;
+    jwtSecretFile = config.sops.secrets."scanapp/jwt-secret".path;
+  };
 }
 ```
 
-### Option 3: agenix
+### agenix
 
 ```nix
 {
   age.secrets.scanapp-jwt = {
     file = ./secrets/scanapp-jwt.age;
     owner = "scanapp";
-    group = "scanapp";
   };
 
-  services.scanapp.jwtSecretFile = config.age.secrets.scanapp-jwt.path;
+  services.scanapp = {
+    autoGenerateJwtSecret = false;
+    jwtSecretFile = config.age.secrets.scanapp-jwt.path;
+  };
 }
 ```
 
@@ -101,7 +115,8 @@ openssl rand -base64 48 | sudo tee /run/secrets/scanapp-jwt > /dev/null
 |--------|---------|-------------|
 | `enable` | `false` | Enable the service |
 | `domain` | `"shop.local"` | Domain for nginx/avahi |
-| `jwtSecretFile` | required | Path to JWT secret file |
+| `autoGenerateJwtSecret` | `true` | Auto-generate JWT secret on first start |
+| `jwtSecretFile` | `null` | Path to JWT secret (optional if auto-generating) |
 | `ports.api` | `8081` | API server port |
 | `ports.app` | `8082` | Frontend/Expo port |
 | `database.createLocally` | `true` | Create local PostgreSQL |
@@ -119,6 +134,8 @@ openssl rand -base64 48 | sudo tee /run/secrets/scanapp-jwt > /dev/null
 services.scanapp = {
   enable = true;
   domain = "shop.example.com";
+
+  autoGenerateJwtSecret = false;
   jwtSecretFile = config.sops.secrets."scanapp/jwt-secret".path;
 
   database = {

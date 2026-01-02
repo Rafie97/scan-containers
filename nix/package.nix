@@ -46,7 +46,7 @@ buildNpmPackage rec {
 
   meta = with lib; {
     description = "Scan Containers - Grocery store shopping assistant API server";
-    homepage = "https://github.com/youruser/scan-containers";
+    homepage = "https://github.com/Rafie97/scan-containers";
     license = licenses.mit;
     platforms = platforms.linux ++ platforms.darwin;
     mainProgram = "scanapp-server";

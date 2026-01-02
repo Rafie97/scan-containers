@@ -44,7 +44,7 @@ pkgs.dockerTools.buildLayeredImage {
     Labels = {
       "org.opencontainers.image.title" = "Scan Containers";
       "org.opencontainers.image.description" = "Grocery store shopping assistant";
-      "org.opencontainers.image.source" = "https://github.com/youruser/scan-containers";
+      "org.opencontainers.image.source" = "https://github.com/Rafie97/scan-containers";
     };
   };
 

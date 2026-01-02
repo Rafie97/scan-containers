@@ -427,7 +427,7 @@ in mkApp {
   config = cfg: {
     # Import the actual scanapp module
     imports = [ (builtins.fetchGit {
-      url = "https://github.com/youruser/scan-containers";
+      url = "https://github.com/Rafie97/scan-containers";
       ref = "main";
     } + "/nix/module.nix") ];
 
@@ -467,7 +467,7 @@ docker-compose up
 Or use the pre-built image from CI:
 
 ```bash
-docker pull ghcr.io/youruser/scanapp:latest
+docker pull ghcr.io/Rafie97/scanapp:latest
 docker-compose up
 ```
 
@@ -530,8 +530,7 @@ services:
 
 Once fully migrated, these become optional:
 - `Dockerfile` (replaced by `nix/docker-image.nix`)
-- `start-dev.sh` credential generation (replaced by SOPS)
-- `compose.nix` (the compose2nix output - module replaces this)
+- `start-dev.sh` credential generation (replaced by auto-generated secrets)
 
 ## Benefits Summary
 

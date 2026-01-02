@@ -62,6 +62,16 @@
           ];
 
           shellHook = ''
+            # Load .env for database credentials
+            if [ -f .env ]; then
+              export $(grep -v '^#' .env | xargs)
+              export PGHOST=localhost
+              export PGPORT=5432
+              export PGUSER="$DATABASE_USER"
+              export PGPASSWORD="$DATABASE_PASSWORD"
+              export PGDATABASE="$DATABASE_NAME"
+            fi
+
             echo "Scan Containers Development Shell"
             echo "================================="
             echo "Node.js: $(node --version)"
@@ -70,6 +80,7 @@
             echo "  npm install     - Install dependencies"
             echo "  npm run dev     - Start Expo dev server"
             echo "  npm run server  - Start API server"
+            echo "  psql            - Connect to dev database"
             echo ""
             echo "Nix commands:"
             echo "  nix build              - Build the server package"

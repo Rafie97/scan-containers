@@ -6,35 +6,57 @@ A self-hosted mobile/web app for scanning product barcodes, managing inventory, 
 
 ### NixOS Homelab (Recommended)
 
-Add to your flake inputs and enable the service:
+#### Flake-based NixOS
 
 ```nix
 # flake.nix
 {
-  inputs.scanapp.url = "github:youruser/scan-containers";
-}
+  inputs.scanapp.url = "github:Rafie97/scan-containers";
 
-# configuration.nix
-{ config, ... }: {
-  imports = [ inputs.scanapp.nixosModules.scanapp ];
-
-  services.scanapp = {
-    enable = true;
-    domain = "shop.home.local";
-    jwtSecretFile = "/run/secrets/scanapp-jwt";
+  outputs = { nixpkgs, scanapp, ... }: {
+    nixosConfigurations.yourhost = nixpkgs.lib.nixosSystem {
+      modules = [
+        scanapp.nixosModules.scanapp
+        {
+          services.scanapp = {
+            enable = true;
+            domain = "shop.home.local";
+          };
+        }
+      ];
+    };
   };
 }
 ```
 
-Generate the JWT secret and rebuild:
+#### Traditional configuration.nix (no flakes)
 
+```nix
+# /etc/nixos/configuration.nix
+{ config, pkgs, ... }:
+let
+  scanapp = builtins.fetchGit {
+    url = "https://github.com/Rafie97/scan-containers";
+    ref = "main";
+  };
+in {
+  imports = [ "${scanapp}/nix/module.nix" ];
+
+  services.scanapp = {
+    enable = true;
+    domain = "shop.home.local";
+  };
+}
+```
+
+Then rebuild:
 ```bash
-openssl rand -base64 48 | sudo tee /run/secrets/scanapp-jwt
 sudo nixos-rebuild switch
 ```
 
 **What gets deployed automatically:**
 - PostgreSQL database (socket auth, no password needed)
+- JWT secret (auto-generated on first start)
 - systemd service with security hardening
 - nginx reverse proxy
 - Avahi mDNS (access via `shop.home.local` from any device on LAN)
@@ -144,7 +166,8 @@ All routes under `/api/*`:
 |--------|---------|-------------|
 | `services.scanapp.enable` | `false` | Enable the service |
 | `services.scanapp.domain` | `"shop.local"` | Domain for nginx/avahi |
-| `services.scanapp.jwtSecretFile` | required | Path to JWT secret |
+| `services.scanapp.autoGenerateJwtSecret` | `true` | Auto-generate JWT secret on first start |
+| `services.scanapp.jwtSecretFile` | `null` | Path to JWT secret (optional if auto-generating) |
 | `services.scanapp.ports.api` | `8081` | API port |
 | `services.scanapp.ports.app` | `8082` | Frontend port |
 | `services.scanapp.database.createLocally` | `true` | Auto-create PostgreSQL |
@@ -153,16 +176,24 @@ All routes under `/api/*`:
 
 ## Secrets Management
 
-**SOPS (recommended):**
+For most homelab setups, the default auto-generated JWT secret is fine. For production or multi-machine setups, you can use SOPS or agenix.
+
+**SOPS (for production):**
 ```nix
 sops.secrets."scanapp/jwt-secret".owner = "scanapp";
-services.scanapp.jwtSecretFile = config.sops.secrets."scanapp/jwt-secret".path;
+services.scanapp = {
+  autoGenerateJwtSecret = false;
+  jwtSecretFile = config.sops.secrets."scanapp/jwt-secret".path;
+};
 ```
 
 **agenix:**
 ```nix
 age.secrets.scanapp-jwt = { file = ./secrets/scanapp-jwt.age; owner = "scanapp"; };
-services.scanapp.jwtSecretFile = config.age.secrets.scanapp-jwt.path;
+services.scanapp = {
+  autoGenerateJwtSecret = false;
+  jwtSecretFile = config.age.secrets.scanapp-jwt.path;
+};
 ```
 
 ## Service Management

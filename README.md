@@ -1,31 +1,60 @@
 # Scan Containers
 
-A self-hosted grocery store shopping assistant for your homelab. Scan barcodes, manage inventory, track promotions, and navigate store layouts.
+A self-hosted grocery store shopping assistant for your store. Scan barcodes, manage inventory, track promotions, and navigate store layouts.
 
 ## Quick Start (NixOS)
 
+### Option A: Flake-based NixOS
+
 ```nix
+# flake.nix
 {
-  inputs.scanapp.url = "github:youruser/scan-containers";
-}
+  inputs.scanapp.url = "github:Rafie97/scan-containers";
 
-{ config, ... }: {
-  imports = [ inputs.scanapp.nixosModules.scanapp ];
-
-  services.scanapp = {
-    enable = true;
-    domain = "shop.home.local";
-    jwtSecretFile = "/run/secrets/scanapp-jwt";
+  outputs = { nixpkgs, scanapp, ... }: {
+    nixosConfigurations.yourhost = nixpkgs.lib.nixosSystem {
+      modules = [
+        scanapp.nixosModules.scanapp
+        {
+          services.scanapp = {
+            enable = true;
+            domain = "shop.home.local";  # Access via http://shop.home.local
+          };
+        }
+      ];
+    };
   };
 }
 ```
 
+### Option B: Traditional configuration.nix
+
+```nix
+# /etc/nixos/configuration.nix
+{ config, pkgs, ... }:
+let
+  scanapp = builtins.fetchGit {
+    url = "https://github.com/Rafie97/scan-containers";
+    ref = "main";
+  };
+in {
+  imports = [ "${scanapp}/nix/module.nix" ];
+
+  services.scanapp = {
+    enable = true;
+    domain = "shop.home.local";
+  };
+}
+```
+
+Then rebuild:
 ```bash
-openssl rand -base64 48 | sudo tee /run/secrets/scanapp-jwt
 sudo nixos-rebuild switch
 ```
 
 Access at `http://shop.home.local/admin/setup` to create your admin account.
+
+**What gets set up automatically:** PostgreSQL, nginx reverse proxy, mDNS (so `shop.home.local` works on your LAN), firewall rules, and a JWT secret for authentication.
 
 ## Quick Start (Docker)
 

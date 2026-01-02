@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    scanapp.url = "github:youruser/scan-containers";
+    scanapp.url = "github:Rafie97/scan-containers";
   };
 
   outputs = { self, nixpkgs, scanapp }: {
@@ -19,24 +19,21 @@
           services.scanapp = {
             enable = true;
             domain = "shop.home.local";
-
-            # JWT secret file (required)
-            # For SOPS users: config.sops.secrets."scanapp/jwt-secret".path
-            jwtSecretFile = "/run/secrets/scanapp-jwt";
+            # That's it! JWT secret auto-generates on first start.
 
             # Optional: customize ports
             # ports.api = 8081;
             # ports.app = 8082;
+
+            # Optional: use SOPS for secrets (production)
+            # autoGenerateJwtSecret = false;
+            # jwtSecretFile = config.sops.secrets."scanapp/jwt-secret".path;
 
             # Optional: use external database
             # database.createLocally = false;
             # database.host = "postgres.example.com";
             # database.passwordFile = config.sops.secrets."scanapp/db-password".path;
           };
-
-          # Example SOPS secrets configuration (if using sops-nix)
-          # sops.secrets."scanapp/jwt-secret" = {};
-          # sops.secrets."scanapp/db-password" = {};
         })
       ];
     };
