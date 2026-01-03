@@ -33,8 +33,8 @@ export default function PromosManagement() {
   };
 
   const filteredItems = items.filter(item => {
-    if (filter === 'promo') return item.promo;
-    if (filter === 'regular') return !item.promo;
+    if (filter === 'promo') {return item.promo;}
+    if (filter === 'regular') {return !item.promo;}
     return true;
   });
 

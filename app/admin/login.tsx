@@ -13,15 +13,6 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
 
-  // Web-only
-  if (Platform.OS !== 'web') {
-    return <Redirect href="/" />;
-  }
-
-  useEffect(() => {
-    checkSetupStatus();
-  }, []);
-
   const checkSetupStatus = async () => {
     try {
       const { needsSetup } = await setupApi.checkStatus();
@@ -34,6 +25,17 @@ export default function AdminLogin() {
       setCheckingSetup(false);
     }
   };
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      checkSetupStatus();
+    }
+  }, []);
+
+  // Web-only
+  if (Platform.OS !== 'web') {
+    return <Redirect href="/" />;
+  }
 
   // Redirect if already logged in as admin
   if (!isLoading && isAuthenticated && isAdmin) {

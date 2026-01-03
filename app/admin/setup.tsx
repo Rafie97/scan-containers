@@ -1,9 +1,9 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { setupApi } from '@/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Redirect, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { setupApi } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AdminSetup() {
   const router = useRouter();
@@ -15,15 +15,6 @@ export default function AdminSetup() {
   const [loading, setLoading] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
   const [needsSetup, setNeedsSetup] = useState(false);
-
-  // Web-only
-  if (Platform.OS !== 'web') {
-    return <Redirect href="/" />;
-  }
-
-  useEffect(() => {
-    checkSetupStatus();
-  }, []);
 
   const checkSetupStatus = async () => {
     try {
@@ -38,6 +29,17 @@ export default function AdminSetup() {
       setCheckingSetup(false);
     }
   };
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      checkSetupStatus();
+    }
+  }, []);
+
+  // Web-only
+  if (Platform.OS !== 'web') {
+    return <Redirect href="/" />;
+  }
 
   const handleSubmit = async () => {
     setError('');

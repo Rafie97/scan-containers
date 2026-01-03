@@ -25,7 +25,7 @@ export default function MapEditor() {
       setAisles(map.aisles?.map(a => ({
         x: a.coordinate.x,
         y: a.coordinate.y,
-        id: a.id || `aisle-${a.coordinate.x}-${a.coordinate.y}`
+        id: a.id || `aisle-${a.coordinate.x}-${a.coordinate.y}`,
       })) || []);
       setWalls(map.wallCoordinates || []);
     } catch (err) {
@@ -64,7 +64,7 @@ export default function MapEditor() {
     } else if (selectedTool === 'wall') {
       // For walls, toggle single cell as a 1x1 wall
       const existingIndex = walls.findIndex(w =>
-        w.start.x === x && w.start.y === y && w.end.x === x && w.end.y === y
+        w.start.x === x && w.start.y === y && w.end.x === x && w.end.y === y,
       );
       if (existingIndex >= 0) {
         setWalls(walls.filter((_, i) => i !== existingIndex));
@@ -76,7 +76,7 @@ export default function MapEditor() {
 
   const isWall = (x: number, y: number) => {
     return walls.some(w =>
-      x >= w.start.x && x <= w.end.x && y >= w.start.y && y <= w.end.y
+      x >= w.start.x && x <= w.end.x && y >= w.start.y && y <= w.end.y,
     );
   };
 
@@ -99,7 +99,7 @@ export default function MapEditor() {
           >
             {isAisle && <Text style={styles.cellLabel}>A</Text>}
             {isWallCell && <Text style={styles.cellLabelWall}>W</Text>}
-          </TouchableOpacity>
+          </TouchableOpacity>,
         );
       }
     }

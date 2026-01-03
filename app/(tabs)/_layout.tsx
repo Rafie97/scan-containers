@@ -1,8 +1,7 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { AntDesign, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
 import React from 'react';
-
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -55,7 +54,11 @@ export default function TabLayout() {
         options={{
           title: 'Promo',
           tabBarIcon: ({ focused }) => (
-            <Ionicons name={focused ? 'pricetags' : 'pricetags-outline'} size={35} color="black" />
+            <AntDesign
+              name="tags"
+              size={28}
+              color={focused ? 'black' : '#888'}
+            />
           ),
         }}
       />

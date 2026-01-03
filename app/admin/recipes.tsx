@@ -44,8 +44,8 @@ export default function RecipesManagement() {
   };
 
   const addIngredient = (itemId: string) => {
-    if (!editingRecipe) return;
-    if (editingRecipe.ingredients?.includes(itemId)) return;
+    if (!editingRecipe) {return;}
+    if (editingRecipe.ingredients?.includes(itemId)) {return;}
     setEditingRecipe({
       ...editingRecipe,
       ingredients: [...(editingRecipe.ingredients || []), itemId],
@@ -53,7 +53,7 @@ export default function RecipesManagement() {
   };
 
   const removeIngredient = (itemId: string) => {
-    if (!editingRecipe) return;
+    if (!editingRecipe) {return;}
     setEditingRecipe({
       ...editingRecipe,
       ingredients: editingRecipe.ingredients?.filter(id => id !== itemId) || [],
@@ -63,7 +63,7 @@ export default function RecipesManagement() {
   const getItemById = (id: string) => items.find(i => i.id === id);
 
   const calculateTotal = () => {
-    if (!editingRecipe?.ingredients) return 0;
+    if (!editingRecipe?.ingredients) {return 0;}
     return editingRecipe.ingredients.reduce((sum, id) => {
       const item = getItemById(id);
       return sum + Number(item?.price || 0);
@@ -71,7 +71,7 @@ export default function RecipesManagement() {
   };
 
   const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+    item.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   if (loading) {
@@ -121,7 +121,7 @@ export default function RecipesManagement() {
             <View style={styles.ingredientsList}>
               {editingRecipe.ingredients?.map(id => {
                 const item = getItemById(id);
-                if (!item) return null;
+                if (!item) {return null;}
                 return (
                   <View key={id} style={styles.ingredientChip}>
                     <Text style={styles.ingredientName}>{item.name}</Text>

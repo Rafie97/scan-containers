@@ -31,12 +31,12 @@ export default function MapPage() {
   useFocusEffect(
     useCallback(() => {
       loadMap();
-    }, [])
+    }, []),
   );
 
   // Memoize grid calculation
   const { grid, cellSize, gridWidth, gridHeight } = useMemo(() => {
-    if (!storeMap) return { grid: [], cellSize: 0, gridWidth: 0, gridHeight: 0 };
+    if (!storeMap) {return { grid: [], cellSize: 0, gridWidth: 0, gridHeight: 0 };}
 
     const gw = storeMap.mapSize.width;
     const gh = storeMap.mapSize.height;
@@ -50,7 +50,7 @@ export default function MapPage() {
     storeMap.wallCoordinates?.forEach(wall => {
       for (let x = wall.startX; x <= wall.endX; x++) {
         for (let y = wall.startY; y <= wall.endY; y++) {
-          if (y < gh && x < gw) g[y][x] = 'wall';
+          if (y < gh && x < gw) {g[y][x] = 'wall';}
         }
       }
     });

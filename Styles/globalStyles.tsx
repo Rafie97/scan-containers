@@ -1,24 +1,26 @@
-const styles = {
+import { StyleSheet } from 'react-native';
+
+const gs = StyleSheet.create({
   fullBackground: {
     flex: 1,
-    width: '100%' as '100%',
-    height: '100%' as '100%',
-    alignItems: 'center' as 'center',
-    backgroundColor: '#fafafa' as '#fafafa',
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
   },
 
   header: {
     margin: 20,
     marginTop: 40,
-    fontWeight: 'bold' as 'bold',
-    textAlign: 'left' as 'left',
+    fontWeight: 'bold',
+    textAlign: 'left',
     fontSize: 24,
   },
 
   subHeader: {
     margin: 20,
-    fontWeight: 'bold' as 'bold',
-    textAlign: 'left' as 'left',
+    fontWeight: 'bold',
+    textAlign: 'left',
     fontSize: 20,
   },
 
@@ -39,19 +41,19 @@ const styles = {
   },
 
   aSelfCenter: {
-    alignSelf: 'center' as 'center',
+    alignSelf: 'center',
   },
 
   aCenter: {
-    alignItems: 'center' as 'center',
+    alignItems: 'center',
   },
 
   aStretch: {
-    alignSelf: 'stretch' as 'stretch',
+    alignSelf: 'stretch',
   },
 
   bold: {
-    fontWeight: 'bold' as 'bold',
+    fontWeight: 'bold',
   },
 
   bgBlue: {
@@ -75,14 +77,14 @@ const styles = {
     flex: 1,
   },
   flexColumn: {
-    flexDirection: 'column' as 'column',
+    flexDirection: 'column',
   },
   flexRow: {
-    flexDirection: 'row' as 'row',
+    flexDirection: 'row',
   },
 
   jCenter: {
-    justifyContent: 'center' as 'center',
+    justifyContent: 'center',
   },
 
   margin10: {
@@ -102,7 +104,7 @@ const styles = {
   },
 
   pAbsolute: {
-    position: 'absolute' as 'absolute',
+    position: 'absolute',
   },
 
   radius10: {
@@ -110,22 +112,23 @@ const styles = {
   },
 
   shadow: {
-    shadowColor: '#000' as '#000',
+    shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowOffset: {
-      height: 4
+      width: 0,
+      height: 4,
     },
     shadowRadius: 4,
     elevation: 8,
   },
 
   taCenter: {
-    textAlign: 'center' as 'center',
+    textAlign: 'center',
   },
 
   white: {
     color: '#fdfdfd',
   },
-};
+});
 
-export default styles;
+export default gs;

@@ -269,9 +269,10 @@ in {
           '';
         };
 
-        # Web app - serve static files, fallback to index.html for SPA routing
+        # Web app - serve static files with proper index handling
         locations."/" = {
-          tryFiles = "$uri $uri/ /index.html";
+          index = "index.html";
+          tryFiles = "$uri $uri/ $uri/index.html /index.html";
         };
       };
 

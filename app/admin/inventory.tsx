@@ -29,7 +29,7 @@ export default function InventoryManagement() {
   const filteredItems = items.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.barcode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category?.toLowerCase().includes(searchQuery.toLowerCase())
+    item.category?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleSave = async () => {
@@ -53,7 +53,7 @@ export default function InventoryManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
+    if (!confirm('Are you sure you want to delete this item?')) {return;}
 
     try {
       await adminApi.deleteItem(id);

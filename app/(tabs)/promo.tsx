@@ -31,7 +31,7 @@ export default function PromoPage() {
   useFocusEffect(
     useCallback(() => {
       loadPromos();
-    }, [])
+    }, []),
   );
 
   const onRefresh = () => {

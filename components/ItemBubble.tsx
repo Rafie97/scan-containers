@@ -1,9 +1,9 @@
-import React from 'react';
-import { TouchableOpacity, View, Image, Text, StyleSheet } from 'react-native';
 import { EvilIcons } from '@expo/vector-icons';
-import { Item } from '@/models';
+import { Href, router } from 'expo-router';
+import React from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import gs from '@/Styles/globalStyles';
-import { router } from 'expo-router';
+import { Item } from '@/models';
 
 type PropTypes = {
   item: Item;
@@ -26,7 +26,7 @@ export default function ItemBubble({
     if (onPress) {
       onPress();
     } else {
-      router.navigate(`/item/${item.id}`);
+      router.navigate(`/item/${item.id}` as Href);
     }
   };
 
