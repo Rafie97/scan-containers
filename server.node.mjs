@@ -8,7 +8,6 @@ import path from 'path';
 import pg from 'pg';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import qrcode from 'qrcode';
 import { fileURLToPath } from 'url';
 
 const { Pool } = pg;
@@ -89,7 +88,6 @@ if (ADVERTISED_HOST === 'host.docker.internal' && os.platform() === 'linux') {
 console.log(`=========== Detected server IP address: ${SERVER_IP}`);
 
 const WEB_URL = `http://${ADVERTISED_HOST}:${APP_PORT}`;
-const EXPO_URL = `exp://${ADVERTISED_HOST}:${APP_PORT}`;
 
 console.log(`🚀 Node.js server will listen on http://${SERVER_IP}:${NODE_PORT}`);
 console.log(`🌐 App / Expo dev server expected at ${WEB_URL}`);
@@ -800,56 +798,6 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.end('Manifest not found');
       }
-      return;
-    }
-
-    // Handle the root path to show the QR code page
-    if (pathname === '/') {
-      const expoQRCode = await qrcode.toDataURL(EXPO_URL);
-      const webQRCode = await qrcode.toDataURL(WEB_URL);
-      const htmlContent = `
-        <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Scan App Server</title>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background-color: #f4f4f9; }
-              .container { text-align: center; padding: 2rem; background-color: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin: 2rem; }
-              h1 { color: #333; }
-              p { color: #666; }
-              .qr-section { margin: 2rem 0; }
-              img { margin-top: 1rem; border: 5px solid #fff; border-radius: 8px; }
-              code { background-color: #eee; padding: 0.2em 0.4em; border-radius: 4px; }
-              .divider { border-top: 1px solid #eee; margin: 2rem 0; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>Scan App Server</h1>
-              <p>Self-hosted with PostgreSQL backend</p>
-
-              <div class="qr-section">
-                <h2>Web Version</h2>
-                <p>Scan to open in your mobile browser</p>
-                <img src="${webQRCode}" alt="Web QR Code" />
-                <p>Or open: <code>${WEB_URL}</code></p>
-              </div>
-
-              <div class="divider"></div>
-
-              <div class="qr-section">
-                <h2>Expo Go Version</h2>
-                <p>Scan with Expo Go app</p>
-                <img src="${expoQRCode}" alt="Expo QR Code" />
-                <p>Or open: <code>${EXPO_URL}</code></p>
-              </div>
-            </div>
-          </body>
-        </html>
-      `;
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end(htmlContent);
       return;
     }
 

@@ -98,6 +98,8 @@ After deployment, access the admin setup wizard:
 2. Create the initial admin account
 3. Start adding inventory, promotions, and store maps
 
+**In-Store Display:** Open `/connect` to show a QR code for customers to scan (e.g., `http://shop.local/connect`)
+
 ## Architecture
 
 ```
@@ -128,7 +130,8 @@ After deployment, access the admin setup wizard:
 ```
 app/
 ├── (tabs)/           # Mobile app screens (scan, cart, map, promos, account)
-└── admin/            # Web admin portal (inventory, promos, users, maps)
+├── admin/            # Web admin portal (inventory, promos, users, maps)
+└── connect.tsx       # In-store QR code display page
 
 server.node.mjs       # API server (40+ endpoints)
 db/schema.sql         # PostgreSQL schema
@@ -172,7 +175,6 @@ All routes under `/api/*`:
 | `services.scanapp.autoGenerateJwtSecret` | `true` | Auto-generate JWT secret on first start |
 | `services.scanapp.jwtSecretFile` | `null` | Path to JWT secret (optional if auto-generating) |
 | `services.scanapp.ports.api` | `8081` | API port |
-| `services.scanapp.ports.app` | `8082` | Frontend port |
 | `services.scanapp.database.createLocally` | `true` | Auto-create PostgreSQL |
 | `services.scanapp.nginx.enable` | `true` | Enable reverse proxy |
 | `services.scanapp.avahi.enable` | `true` | Enable mDNS |

@@ -23,13 +23,6 @@ in {
       description = "Domain for the shopping web app";
     };
 
-    connectDomain = mkOption {
-      type = types.str;
-      default = "connect.local";
-      example = "connect.home.local";
-      description = "Domain for the QR code / connection page (displayed in-store)";
-    };
-
     ports = {
       api = mkOption {
         type = types.port;
@@ -276,19 +269,6 @@ in {
         };
       };
 
-      # Connect page - QR codes for in-store display
-      virtualHosts.${cfg.connectDomain} = {
-        forceSSL = cfg.nginx.enableSSL;
-        enableACME = cfg.nginx.enableSSL;
-
-        locations."/" = {
-          proxyPass = "http://127.0.0.1:${toString cfg.ports.api}";
-          proxyWebsockets = true;
-          extraConfig = ''
-            proxy_read_timeout 60;
-          '';
-        };
-      };
     };
 
     # Firewall rules
@@ -309,38 +289,24 @@ in {
         userServices = true;
       };
       extraServiceFiles = {
-        scanapp-shop = ''
+        scanapp = ''
           <?xml version="1.0" standalone='no'?>
           <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
           <service-group>
-            <name>Scan App - Shop</name>
+            <name>Scan App</name>
             <service>
               <type>_http._tcp</type>
               <port>80</port>
               <txt-record>path=/</txt-record>
-              <txt-record>type=shop</txt-record>
-            </service>
-          </service-group>
-        '';
-        scanapp-connect = ''
-          <?xml version="1.0" standalone='no'?>
-          <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
-          <service-group>
-            <name>Scan App - Connect</name>
-            <service>
-              <type>_http._tcp</type>
-              <port>80</port>
-              <txt-record>path=/</txt-record>
-              <txt-record>type=connect</txt-record>
             </service>
           </service-group>
         '';
       };
     };
 
-    # Publish additional hostnames via mDNS
-    systemd.services.scanapp-avahi-cnames = mkIf cfg.avahi.enable {
-      description = "Publish Scan App mDNS hostnames";
+    # Publish hostname via mDNS
+    systemd.services.scanapp-avahi-hostname = mkIf cfg.avahi.enable {
+      description = "Publish Scan App mDNS hostname";
       wantedBy = [ "multi-user.target" ];
       after = [ "avahi-daemon.service" "network-online.target" ];
       requires = [ "avahi-daemon.service" ];
@@ -356,16 +322,13 @@ in {
 
       script = let
         shopHost = builtins.head (lib.splitString "." cfg.domain);
-        connectHost = builtins.head (lib.splitString "." cfg.connectDomain);
       in ''
         IP=$(ip -4 addr show | grep -oP '(?<=inet\s)192\.\d+\.\d+\.\d+' | head -1)
         if [ -z "$IP" ]; then
           IP=$(hostname -I | awk '{print $1}')
         fi
-        echo "Publishing mDNS hostnames for IP: $IP"
-        avahi-publish -a -R ${shopHost}.local "$IP" &
-        avahi-publish -a -R ${connectHost}.local "$IP" &
-        wait
+        echo "Publishing mDNS hostname ${shopHost}.local for IP: $IP"
+        exec avahi-publish -a -R ${shopHost}.local "$IP"
       '';
     };
   });
