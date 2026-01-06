@@ -9,7 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "export": "expo export",
+    "build": "expo export --platform web --output-dir dist",
     "server:node": "node server.node.mjs"
   },
   "dependencies": {
