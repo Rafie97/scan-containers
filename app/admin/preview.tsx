@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const DEVICE_PRESETS = [
   { name: 'iPhone SE', width: 375, height: 667 },
@@ -20,10 +20,9 @@ export default function DevicePreview() {
   const frameWidth = orientation === 'portrait' ? selectedDevice.width : selectedDevice.height;
   const frameHeight = orientation === 'portrait' ? selectedDevice.height : selectedDevice.width;
 
-  // Get the app URL (same as Expo dev server)
-  const appUrl = typeof window !== 'undefined'
-    ? `${window.location.protocol}//${window.location.hostname}:8082`
-    : 'http://localhost:8082';
+  // Domain is injected at build time via EXPO_PUBLIC_DOMAIN
+  const domain = process.env.EXPO_PUBLIC_DOMAIN || 'shop.local';
+  const appUrl = `http://${domain}`;
 
   return (
     <View style={styles.container}>

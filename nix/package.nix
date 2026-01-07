@@ -4,6 +4,7 @@
 , buildNpmPackage
 , nodejs_22
 , makeWrapper
+, domain ? "shop.local"
 }:
 
 builtins.seq
@@ -29,6 +30,7 @@ builtins.seq
     buildPhase = ''
       runHook preBuild
       echo "Building Expo web app..."
+      export EXPO_PUBLIC_DOMAIN="${domain}"
       npx expo export --platform web --output-dir dist
       runHook postBuild
     '';

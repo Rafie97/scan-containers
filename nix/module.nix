@@ -131,7 +131,9 @@ in {
     # Ensure the overlay is applied so pkgs.scanapp-server exists
     nixpkgs.overlays = [
       (final: prev: {
-        scanapp-server = final.callPackage ./package.nix {};
+        scanapp-server = final.callPackage ./package.nix {
+          domain = cfg.domain;
+        };
       })
     ];
 
