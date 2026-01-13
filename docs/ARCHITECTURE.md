@@ -1,8 +1,8 @@
-# Scan Containers - NixOS-First Architecture
+# Shop App - NixOS-First Architecture
 
 ## Overview
 
-Scan Containers follows a **NixOS-first** deployment strategy with a single Nix flake as the source of truth. This provides:
+Shop App follows a **NixOS-first** deployment strategy with a single Nix flake as the source of truth. This provides:
 
 1. **Native NixOS deployment** - For homelab platform users
 2. **Nix-built Docker images** - For non-NixOS users
@@ -11,8 +11,8 @@ Scan Containers follows a **NixOS-first** deployment strategy with a single Nix 
 ┌─────────────────────────────────────────────────────┐
 │  Source of Truth: flake.nix                         │
 │                                                     │
-│  ├── packages.scanapp        (the server package)   │
-│  ├── nixosModules.scanapp    (NixOS module)         │
+│  ├── packages.shopapp        (the server package)   │
+│  ├── nixosModules.shopapp    (NixOS module)         │
 │  └── packages.docker-image   (Docker image)         │
 └─────────────────────────────────────────────────────┘
                        │
@@ -22,7 +22,7 @@ Scan Containers follows a **NixOS-first** deployment strategy with a single Nix 
  │  NixOS Users    │      │  Non-Nix Users  │
  │                 │      │                 │
  │  services.      │      │  docker pull    │
- │    scanapp      │      │    scanapp      │
+ │    shopapp      │      │    shopapp      │
  │    .enable=true │      │  docker-compose │
  └─────────────────┘      └─────────────────┘
 ```
@@ -35,7 +35,7 @@ scan-containers/
 ├── flake.lock
 │
 ├── nix/
-│   ├── package.nix              # Scanapp server package derivation
+│   ├── package.nix              # Shop App server package derivation
 │   ├── module.nix               # NixOS module
 │   ├── docker-image.nix         # Docker image derivation
 │   └── default.nix              # Shared utilities
@@ -60,7 +60,7 @@ Builds the Node.js server as a Nix package:
 { lib, stdenv, nodejs_20, nodePackages, ... }:
 
 stdenv.mkDerivation {
-  pname = "scanapp-server";
+  pname = "shopapp-server";
   version = "0.1.0";
 
   src = ../.;
@@ -73,19 +73,19 @@ stdenv.mkDerivation {
   '';
 
   installPhase = ''
-    mkdir -p $out/{bin,lib/scanapp}
-    cp -r node_modules server.node.mjs db $out/lib/scanapp/
+    mkdir -p $out/{bin,lib/shopapp}
+    cp -r node_modules server.node.mjs db $out/lib/shopapp/
 
     # Create wrapper script
-    cat > $out/bin/scanapp-server << 'EOF'
+    cat > $out/bin/shopapp-server << 'EOF'
     #!/usr/bin/env bash
-    exec ${nodejs_20}/bin/node $out/lib/scanapp/server.node.mjs "$@"
+    exec ${nodejs_20}/bin/node $out/lib/shopapp/server.node.mjs "$@"
     EOF
-    chmod +x $out/bin/scanapp-server
+    chmod +x $out/bin/shopapp-server
   '';
 
   meta = with lib; {
-    description = "Scan Containers - Grocery store shopping assistant API";
+    description = "Shop App - Grocery store shopping assistant API";
     license = licenses.mit;
     platforms = platforms.linux ++ platforms.darwin;
   };
@@ -100,10 +100,10 @@ Native NixOS integration with SOPS secrets, PostgreSQL, and systemd:
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.services.scanapp;
+  cfg = config.services.shopapp;
 in {
-  options.services.scanapp = {
-    enable = lib.mkEnableOption "Scan Containers grocery app";
+  options.services.shopapp = {
+    enable = lib.mkEnableOption "Shop App grocery app";
 
     domain = lib.mkOption {
       type = lib.types.str;
@@ -132,12 +132,12 @@ in {
       };
       name = lib.mkOption {
         type = lib.types.str;
-        default = "scanapp";
+        default = "shopapp";
         description = "Database name";
       };
       user = lib.mkOption {
         type = lib.types.str;
-        default = "scanapp";
+        default = "shopapp";
         description = "Database user";
       };
       passwordFile = lib.mkOption {
@@ -155,7 +155,7 @@ in {
     storage = {
       dataDir = lib.mkOption {
         type = lib.types.path;
-        default = "/var/lib/scanapp";
+        default = "/var/lib/shopapp";
         description = "Data directory for uploads and assets";
       };
     };
@@ -181,16 +181,16 @@ in {
     };
 
     # System user
-    users.users.scanapp = {
+    users.users.shopapp = {
       isSystemUser = true;
-      group = "scanapp";
+      group = "shopapp";
       home = cfg.storage.dataDir;
       createHome = true;
     };
-    users.groups.scanapp = {};
+    users.groups.shopapp = {};
 
     # Systemd service
-    systemd.services.scanapp-server = {
+    systemd.services.shopapp-server = {
       description = "Scan Containers API Server";
       wantedBy = [ "multi-user.target" ];
       after = [ "postgresql.service" "network.target" ];
@@ -206,10 +206,10 @@ in {
 
       serviceConfig = {
         Type = "simple";
-        User = "scanapp";
-        Group = "scanapp";
+        User = "shopapp";
+        Group = "shopapp";
         WorkingDirectory = cfg.storage.dataDir;
-        ExecStart = "${pkgs.scanapp-server}/bin/scanapp-server";
+        ExecStart = "${pkgs.shopapp-server}/bin/shopapp-server";
         Restart = "always";
         RestartSec = 5;
 
@@ -257,11 +257,11 @@ in {
         domain = true;
         addresses = true;
       };
-      extraServiceFiles.scanapp = ''
+      extraServiceFiles.shopapp = ''
         <?xml version="1.0" standalone='no'?>
         <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
         <service-group>
-          <name>Scan Containers</name>
+          <name>Shop App</name>
           <service>
             <type>_http._tcp</type>
             <port>${toString cfg.ports.app}</port>
@@ -279,21 +279,21 @@ in {
 Reproducible Docker image built from the same Nix definitions:
 
 ```nix
-{ pkgs, scanapp-server, ... }:
+{ pkgs, shopapp-server, ... }:
 
 pkgs.dockerTools.buildLayeredImage {
-  name = "scanapp";
+  name = "shopapp";
   tag = "latest";
 
   contents = [
     pkgs.nodejs_20
     pkgs.coreutils
     pkgs.bash
-    scanapp-server
+    shopapp-server
   ];
 
   config = {
-    Cmd = [ "${scanapp-server}/bin/scanapp-server" ];
+    Cmd = [ "${shopapp-server}/bin/shopapp-server" ];
     ExposedPorts = {
       "8081/tcp" = {};
       "8082/tcp" = {};
@@ -315,7 +315,7 @@ Ties everything together:
 
 ```nix
 {
-  description = "Scan Containers - Grocery store shopping assistant";
+  description = "Shop App - Grocery store shopping assistant";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -327,17 +327,17 @@ Ties everything together:
       let
         pkgs = import nixpkgs { inherit system; };
 
-        scanapp-server = pkgs.callPackage ./nix/package.nix {};
+        shopapp-server = pkgs.callPackage ./nix/package.nix {};
 
       in {
         # The server package
         packages = {
-          default = scanapp-server;
-          inherit scanapp-server;
+          default = shopapp-server;
+          inherit shopapp-server;
 
           # Docker image (linux only)
           docker-image = pkgs.callPackage ./nix/docker-image.nix {
-            inherit scanapp-server;
+            inherit shopapp-server;
           };
         };
 
@@ -353,13 +353,13 @@ Ties everything together:
     ) // {
       # NixOS module (not system-specific)
       nixosModules = {
-        default = self.nixosModules.scanapp;
-        scanapp = import ./nix/module.nix;
+        default = self.nixosModules.shopapp;
+        shopapp = import ./nix/module.nix;
       };
 
       # Overlay for easy integration
       overlays.default = final: prev: {
-        scanapp-server = final.callPackage ./nix/package.nix {};
+        shopapp-server = final.callPackage ./nix/package.nix {};
       };
     };
 }
@@ -380,20 +380,20 @@ For NixOS users, add to configuration:
     /path/to/scan-containers/nix/module.nix
 
     # Option B: From flake (in flake-based config)
-    # inputs.scanapp.nixosModules.scanapp
+    # inputs.shopapp.nixosModules.shopapp
   ];
 
-  services.scanapp = {
+  services.shopapp = {
     enable = true;
     domain = "shop.home.local";
-    jwtSecretFile = config.sops.secrets."scanapp/jwt-secret".path;
-    database.passwordFile = config.sops.secrets."scanapp/db-password".path;
+    jwtSecretFile = config.sops.secrets."shopapp/jwt-secret".path;
+    database.passwordFile = config.sops.secrets."shopapp/db-password".path;
   };
 
   # SOPS secrets
   sops.secrets = {
-    "scanapp/jwt-secret" = {};
-    "scanapp/db-password" = {};
+    "shopapp/jwt-secret" = {};
+    "shopapp/db-password" = {};
   };
 }
 ```
@@ -408,12 +408,12 @@ sudo nixos-rebuild switch
 When integrated with the homelab platform using `mk-app.nix`:
 
 ```nix
-# In homelab platform: apps/scanapp/default.nix
+# In homelab platform: apps/shopapp/default.nix
 { lib, ... }:
 let
   inherit (import ../../lib/mk-app.nix { inherit lib; }) mkApp;
 in mkApp {
-  name = "scanapp";
+  name = "shopapp";
   description = "Grocery store shopping assistant";
 
   extraOptions = {
@@ -425,13 +425,13 @@ in mkApp {
   };
 
   config = cfg: {
-    # Import the actual scanapp module
+    # Import the actual shopapp module
     imports = [ (builtins.fetchGit {
       url = "https://github.com/Rafie97/scan-containers";
       ref = "main";
     } + "/nix/module.nix") ];
 
-    services.scanapp = {
+    services.shopapp = {
       enable = true;
       domain = cfg.domain;
       ports.app = cfg.port;
@@ -443,7 +443,7 @@ in mkApp {
 
 Users then:
 ```nix
-homelab.apps.scanapp = {
+homelab.apps.shopapp = {
   enable = true;
   domain = "shop.home.local";  # avahi just works
 };
@@ -467,7 +467,7 @@ docker-compose up
 Or use the pre-built image from CI:
 
 ```bash
-docker pull ghcr.io/Rafie97/scanapp:latest
+docker pull ghcr.io/Rafie97/shopapp:latest
 docker-compose up
 ```
 
@@ -477,7 +477,7 @@ docker-compose up
 
 ```yaml
 # secrets/secrets.yaml (encrypted with sops)
-scanapp:
+shopapp:
   jwt-secret: ENC[AES256_GCM,...]
   db-password: ENC[AES256_GCM,...]
 ```
@@ -488,8 +488,8 @@ sops = {
   defaultSopsFile = ./secrets/secrets.yaml;
   age.keyFile = "/var/lib/sops/age-key.txt";
   secrets = {
-    "scanapp/jwt-secret" = { owner = "scanapp"; };
-    "scanapp/db-password" = { owner = "scanapp"; };
+    "shopapp/jwt-secret" = { owner = "shopapp"; };
+    "shopapp/db-password" = { owner = "shopapp"; };
   };
 };
 ```
@@ -501,8 +501,8 @@ For Docker users, secrets come from environment:
 ```yaml
 # docker-compose.yml
 services:
-  scanapp:
-    image: scanapp:latest
+  shopapp:
+    image: shopapp:latest
     environment:
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
@@ -521,7 +521,7 @@ services:
 services:
   app-server:
     # Instead of: build: .
-    image: scanapp:latest
+    image: shopapp:latest
 ```
 
 5. **Add CI** to build and push Docker image from Nix

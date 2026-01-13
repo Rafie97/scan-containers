@@ -1,4 +1,4 @@
-# Scan Containers
+# Shop App
 
 A self-hosted grocery store shopping assistant for your store. Scan barcodes, manage inventory, track promotions, and navigate store layouts.
 
@@ -9,14 +9,14 @@ A self-hosted grocery store shopping assistant for your store. Scan barcodes, ma
 ```nix
 # flake.nix
 {
-  inputs.scanapp.url = "github:Rafie97/scan-containers";
+  inputs.shopapp.url = "github:Rafie97/scan-containers";
 
-  outputs = { nixpkgs, scanapp, ... }: {
+  outputs = { nixpkgs, shopapp, ... }: {
     nixosConfigurations.yourhost = nixpkgs.lib.nixosSystem {
       modules = [
-        scanapp.nixosModules.scanapp
+        shopapp.nixosModules.shopapp
         {
-          services.scanapp = {
+          services.shopapp = {
             enable = true;
             domain = "shop.home.local";  # Access via http://shop.home.local
           };
@@ -33,14 +33,14 @@ A self-hosted grocery store shopping assistant for your store. Scan barcodes, ma
 # /etc/nixos/configuration.nix
 { config, pkgs, ... }:
 let
-  scanapp = builtins.fetchGit {
+  shopapp = builtins.fetchGit {
     url = "https://github.com/Rafie97/scan-containers";
     ref = "main";
   };
 in {
-  imports = [ "${scanapp}/nix/module.nix" ];
+  imports = [ "${shopapp}/nix/module.nix" ];
 
-  services.scanapp = {
+  services.shopapp = {
     enable = true;
     domain = "shop.home.local";
   };
@@ -64,10 +64,10 @@ docker load < result
 docker run -p 8081:8081 -p 8082:8082 \
   -e JWT_SECRET="$(openssl rand -base64 48)" \
   -e DATABASE_HOST=your-postgres-host \
-  -e DATABASE_USER=scanapp \
+  -e DATABASE_USER=shopapp \
   -e DATABASE_PASSWORD=yourpassword \
-  -e DATABASE_NAME=scanapp \
-  scanapp:latest
+  -e DATABASE_NAME=shopapp \
+  shopapp:latest
 ```
 
 ## Development

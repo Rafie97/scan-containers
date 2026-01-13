@@ -1,5 +1,5 @@
 {
-  description = "Scan Containers - Grocery store shopping assistant";
+  description = "Shop App - Grocery store shopping assistant";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -28,17 +28,17 @@
         };
 
         # The server package
-        scanapp-server = pkgs.callPackage ./nix/package.nix {};
+        shopapp-server = pkgs.callPackage ./nix/package.nix {};
 
       in {
         # Packages
         packages = {
-          default = scanapp-server;
-          inherit scanapp-server;
+          default = shopapp-server;
+          inherit shopapp-server;
         } // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
           # Docker image only on Linux
           docker-image = pkgs.callPackage ./nix/docker-image.nix {
-            inherit scanapp-server;
+            inherit shopapp-server;
           };
         };
 
@@ -72,7 +72,7 @@
               export PGDATABASE="$DATABASE_NAME"
             fi
 
-            echo "Scan Containers Development Shell"
+            echo "Shop App Development Shell"
             echo "================================="
             echo "Node.js: $(node --version)"
             echo ""
@@ -91,26 +91,26 @@
 
         # Checks
         checks = {
-          package = scanapp-server;
+          package = shopapp-server;
         };
       }
     ) // {
       # NixOS module (not system-specific)
       nixosModules = {
-        default = self.nixosModules.scanapp;
-        scanapp = import ./nix/module.nix;
+        default = self.nixosModules.shopapp;
+        shopapp = import ./nix/module.nix;
       };
 
       # Overlay for integration into other flakes
       overlays.default = final: prev: {
-        scanapp-server = final.callPackage ./nix/package.nix {};
+        shopapp-server = final.callPackage ./nix/package.nix {};
       };
 
       # Templates for getting started
       templates = {
         default = {
           path = ./templates/nixos;
-          description = "NixOS configuration with Scan Containers";
+          description = "NixOS configuration with Shop App";
         };
       };
     };

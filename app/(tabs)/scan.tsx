@@ -1,12 +1,12 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Button } from 'react-native';
-import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
-import { useNavigation } from 'expo-router';
 import gs from '@/Styles/globalStyles';
 import ItemBubble from '@/components/ItemBubble';
 import { Item } from '@/models';
 import { itemsApi } from '@/services';
 import { useDispatch } from '@/store';
+import { BarcodeScanningResult, CameraView, useCameraPermissions } from 'expo-camera';
+import { useNavigation } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Button, StyleSheet, Text, View } from 'react-native';
 
 export default function ScanPage() {
   const navigation = useNavigation();
@@ -65,7 +65,7 @@ export default function ScanPage() {
     return (
       <View style={[gs.fullBackground, styles.permissionContainer]}>
         <Text style={styles.permissionText}>
-          Camera permission is required to scan barcodes
+          Camera permissions are required to scan barcodes
         </Text>
         <Button onPress={requestPermission} title="Grant Permission" />
       </View>

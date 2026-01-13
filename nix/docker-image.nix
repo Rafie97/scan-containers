@@ -1,8 +1,8 @@
 # nix/docker-image.nix
 # Builds a minimal Docker image from the Nix package
 { pkgs
-, scanapp-server
-, name ? "scanapp"
+, shopapp-server
+, name ? "shopapp"
 , tag ? "latest"
 }:
 
@@ -16,7 +16,7 @@ pkgs.dockerTools.buildLayeredImage {
     bash
 
     # The app itself
-    scanapp-server
+    shopapp-server
 
     # SSL certificates for HTTPS requests
     cacert
@@ -27,7 +27,7 @@ pkgs.dockerTools.buildLayeredImage {
   maxLayers = 120;
 
   config = {
-    Cmd = [ "${scanapp-server}/bin/scanapp-server" ];
+    Cmd = [ "${shopapp-server}/bin/shopapp-server" ];
 
     ExposedPorts = {
       "8081/tcp" = {}; # API server
@@ -42,7 +42,7 @@ pkgs.dockerTools.buildLayeredImage {
     WorkingDir = "/app";
 
     Labels = {
-      "org.opencontainers.image.title" = "Scan Containers";
+      "org.opencontainers.image.title" = "Shop App";
       "org.opencontainers.image.description" = "Grocery store shopping assistant";
       "org.opencontainers.image.source" = "https://github.com/Rafie97/scan-containers";
     };
@@ -51,6 +51,6 @@ pkgs.dockerTools.buildLayeredImage {
   # Extra commands to run in the image context
   extraCommands = ''
     mkdir -p app/db
-    cp -r ${scanapp-server}/lib/scanapp/db/* app/db/
+    cp -r ${shopapp-server}/lib/shopapp/db/* app/db/
   '';
 }

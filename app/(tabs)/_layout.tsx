@@ -1,10 +1,11 @@
-import { AntDesign, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Tabs } from 'expo-router';
-import React from 'react';
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { TagsFilled, TagsOutlined } from '@ant-design/icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Tabs } from 'expo-router';
+import React from 'react';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -54,11 +55,7 @@ export default function TabLayout() {
         options={{
           title: 'Promo',
           tabBarIcon: ({ focused }) => (
-            <AntDesign
-              name="tags"
-              size={28}
-              color={focused ? 'black' : '#888'}
-            />
+            focused ? <TagsFilled size={30} /> : <TagsOutlined size={30} />
           ),
         }}
       />

@@ -1,4 +1,4 @@
-# Scan Containers - Grocery Store Shopping Assistant
+# Shop App - Grocery Store Shopping Assistant
 
 A self-hosted mobile/web app for scanning product barcodes, managing inventory, and navigating store layouts. Built for homelab deployment on NixOS.
 
@@ -11,14 +11,14 @@ A self-hosted mobile/web app for scanning product barcodes, managing inventory, 
 ```nix
 # flake.nix
 {
-  inputs.scanapp.url = "github:Rafie97/scan-containers";
+  inputs.shopapp.url = "github:Rafie97/scan-containers";
 
-  outputs = { nixpkgs, scanapp, ... }: {
+  outputs = { nixpkgs, shopapp, ... }: {
     nixosConfigurations.yourhost = nixpkgs.lib.nixosSystem {
       modules = [
-        scanapp.nixosModules.scanapp
+        shopapp.nixosModules.shopapp
         {
-          services.scanapp = {
+          services.shopapp = {
             enable = true;
             domain = "shop.home.local";
           };
@@ -35,14 +35,14 @@ A self-hosted mobile/web app for scanning product barcodes, managing inventory, 
 # /etc/nixos/configuration.nix
 { config, pkgs, ... }:
 let
-  scanapp = builtins.fetchGit {
+  shopapp = builtins.fetchGit {
     url = "https://github.com/Rafie97/scan-containers";
     ref = "main";
   };
 in {
-  imports = [ "${scanapp}/nix/module.nix" ];
+  imports = [ "${shopapp}/nix/module.nix" ];
 
-  services.scanapp = {
+  services.shopapp = {
     enable = true;
     domain = "shop.home.local";
   };
@@ -51,7 +51,8 @@ in {
 
 Then rebuild:
 ```bash
-sudo nixos-rebuild switch
+sudo nixos-rebuild switch     # Silent build
+sudo nixos-rebuild switch -L  # Verbose (shows Expo bundling progress)
 ```
 
 **What gets deployed automatically:**
@@ -62,20 +63,23 @@ sudo nixos-rebuild switch
 - Avahi mDNS (access via `shop.home.local` from any device on LAN)
 - Firewall rules
 
-### Docker (Non-NixOS)
+### Docker (Non-NixOS, Limited)
 
-Build the Docker image from Nix (ensures consistency):
+For non-NixOS Linux systems, a Docker image is available. Note: **The NixOS module has no Docker dependencies** - this is purely an alternative deployment method.
+
+**Limitations:** Docker deployment cannot use mDNS/Avahi for `.local` domain discovery. You'll need to use IP addresses or configure DNS manually.
 
 ```bash
+# Build uses Nix's dockerTools - no Docker daemon required to build
 nix build .#docker-image
 docker load < result
 docker run -p 8081:8081 -p 8082:8082 \
   -e JWT_SECRET="$(openssl rand -base64 48)" \
   -e DATABASE_HOST=your-postgres-host \
-  -e DATABASE_USER=scanapp \
+  -e DATABASE_USER=shopapp \
   -e DATABASE_PASSWORD=yourpassword \
-  -e DATABASE_NAME=scanapp \
-  scanapp:latest
+  -e DATABASE_NAME=shopapp \
+  shopapp:latest
 ```
 
 ### Development
@@ -105,9 +109,9 @@ After deployment, access the admin setup wizard:
 ```
 ┌─────────────────────────────────────────────┐
 │  flake.nix (source of truth)                │
-│  ├── packages.scanapp-server                │
+│  ├── packages.shopapp-server                │
 │  ├── packages.docker-image                  │
-│  └── nixosModules.scanapp                   │
+│  └── nixosModules.shopapp                   │
 └─────────────────────────────────────────────┘
                     │
         ┌───────────┴───────────┐
@@ -170,14 +174,16 @@ All routes under `/api/*`:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `services.scanapp.enable` | `false` | Enable the service |
-| `services.scanapp.domain` | `"shop.local"` | Domain for nginx/avahi |
-| `services.scanapp.autoGenerateJwtSecret` | `true` | Auto-generate JWT secret on first start |
-| `services.scanapp.jwtSecretFile` | `null` | Path to JWT secret (optional if auto-generating) |
-| `services.scanapp.ports.api` | `8081` | API port |
-| `services.scanapp.database.createLocally` | `true` | Auto-create PostgreSQL |
-| `services.scanapp.nginx.enable` | `true` | Enable reverse proxy |
-| `services.scanapp.avahi.enable` | `true` | Enable mDNS |
+| `services.shopapp.enable` | `false` | Enable the service |
+| `services.shopapp.domain` | `"shop.local"` | Domain for nginx/avahi |
+| `services.shopapp.autoGenerateJwtSecret` | `true` | Auto-generate JWT secret on first start |
+| `services.shopapp.jwtSecretFile` | `null` | Path to JWT secret (optional if auto-generating) |
+| `services.shopapp.ports.api` | `8081` | API port |
+| `services.shopapp.database.createLocally` | `true` | Auto-create PostgreSQL |
+| `services.shopapp.nginx.enable` | `true` | Enable reverse proxy |
+| `services.shopapp.avahi.enable` | `true` | Enable mDNS |
+
+**Note:** The `domain` option is baked into the frontend at build time via `EXPO_PUBLIC_DOMAIN`. Changing the domain requires a rebuild.
 
 ## Secrets Management
 
@@ -185,19 +191,19 @@ For most homelab setups, the default auto-generated JWT secret is fine. For prod
 
 **SOPS (for production):**
 ```nix
-sops.secrets."scanapp/jwt-secret".owner = "scanapp";
-services.scanapp = {
+sops.secrets."shopapp/jwt-secret".owner = "shopapp";
+services.shopapp = {
   autoGenerateJwtSecret = false;
-  jwtSecretFile = config.sops.secrets."scanapp/jwt-secret".path;
+  jwtSecretFile = config.sops.secrets."shopapp/jwt-secret".path;
 };
 ```
 
 **agenix:**
 ```nix
-age.secrets.scanapp-jwt = { file = ./secrets/scanapp-jwt.age; owner = "scanapp"; };
-services.scanapp = {
+age.secrets.shopapp-jwt = { file = ./secrets/shopapp-jwt.age; owner = "shopapp"; };
+services.shopapp = {
   autoGenerateJwtSecret = false;
-  jwtSecretFile = config.age.secrets.scanapp-jwt.path;
+  jwtSecretFile = config.age.secrets.shopapp-jwt.path;
 };
 ```
 
@@ -205,16 +211,16 @@ services.scanapp = {
 
 ```bash
 # Check status
-systemctl status scanapp-server
+systemctl status shopapp-server
 
 # View logs
-journalctl -u scanapp-server -f
+journalctl -u shopapp-server -f
 
 # Restart
-sudo systemctl restart scanapp-server
+sudo systemctl restart shopapp-server
 
 # Check database
-sudo -u postgres psql -d scanapp -c '\dt'
+sudo -u postgres psql -d shopapp -c '\dt'
 ```
 
 ## Implementation Status

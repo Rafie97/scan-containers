@@ -1,19 +1,19 @@
 # nix/module.nix
-# NixOS module for Scan Containers
+# NixOS module for Shop App
 { config, lib, pkgs, ... }:
 
 let
-  cfg = config.services.scanapp;
+  cfg = config.services.shopapp;
   inherit (lib) mkEnableOption mkOption mkIf types;
 in {
-  options.services.scanapp = {
-    enable = mkEnableOption "Scan Containers grocery shopping assistant";
+  options.services.shopapp = {
+    enable = mkEnableOption "Shop App grocery shopping assistant";
 
     package = mkOption {
       type = types.package;
-      default = pkgs.scanapp-server;
-      defaultText = "pkgs.scanapp-server";
-      description = "The scanapp-server package to use";
+      default = pkgs.shopapp-server;
+      defaultText = "pkgs.shopapp-server";
+      description = "The shopapp-server package to use";
     };
 
     domain = mkOption {
@@ -42,12 +42,12 @@ in {
       };
       name = mkOption {
         type = types.str;
-        default = "scanapp";
+        default = "shopapp";
         description = "Database name";
       };
       user = mkOption {
         type = types.str;
-        default = "scanapp";
+        default = "shopapp";
         description = "Database user";
       };
       createLocally = mkOption {
@@ -60,7 +60,7 @@ in {
         default = null;
         description = ''
           Path to file containing database password.
-          Used with SOPS: config.sops.secrets."scanapp/db-password".path
+          Used with SOPS: config.sops.secrets."shopapp/db-password".path
           Not needed for local socket connections with peer auth.
         '';
       };
@@ -72,7 +72,7 @@ in {
       description = ''
         Path to file containing JWT secret for authentication.
         If null and autoGenerateJwtSecret is true, a secret will be auto-generated.
-        For production, use SOPS: config.sops.secrets."scanapp/jwt-secret".path
+        For production, use SOPS: config.sops.secrets."shopapp/jwt-secret".path
       '';
     };
 
@@ -89,7 +89,7 @@ in {
     storage = {
       dataDir = mkOption {
         type = types.path;
-        default = "/var/lib/scanapp";
+        default = "/var/lib/shopapp";
         description = "Data directory for uploads and assets";
       };
     };
@@ -128,10 +128,10 @@ in {
       then cfg.jwtSecretFile
       else "${cfg.storage.dataDir}/jwt-secret";
   in {
-    # Ensure the overlay is applied so pkgs.scanapp-server exists
+    # Ensure the overlay is applied so pkgs.shopapp-server exists
     nixpkgs.overlays = [
       (final: prev: {
-        scanapp-server = final.callPackage ./package.nix {
+        shopapp-server = final.callPackage ./package.nix {
           domain = cfg.domain;
         };
       })
@@ -149,23 +149,23 @@ in {
     };
 
     # System user for the service
-    users.users.scanapp = {
+    users.users.shopapp = {
       isSystemUser = true;
-      group = "scanapp";
+      group = "shopapp";
       home = cfg.storage.dataDir;
       createHome = true;
-      description = "Scan Containers service user";
+      description = "Shop App service user";
     };
-    users.groups.scanapp = {};
+    users.groups.shopapp = {};
 
     # Create data directory with proper permissions
     systemd.tmpfiles.rules = [
-      "d ${cfg.storage.dataDir} 0750 scanapp scanapp -"
+      "d ${cfg.storage.dataDir} 0750 shopapp shopapp -"
     ];
 
     # Main systemd service
-    systemd.services.scanapp-server = {
-      description = "Scan Containers API Server";
+    systemd.services.shopapp-server = {
+      description = "Shop App API Server";
       documentation = [ "https://github.com/Rafie97/scan-containers" ];
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ] ++ lib.optional cfg.database.createLocally "postgresql.service";
@@ -183,8 +183,8 @@ in {
 
       serviceConfig = {
         Type = "simple";
-        User = "scanapp";
-        Group = "scanapp";
+        User = "shopapp";
+        Group = "shopapp";
         WorkingDirectory = cfg.storage.dataDir;
         Restart = "always";
         RestartSec = 5;
@@ -222,7 +222,7 @@ in {
         fi
 
         export JWT_SECRET="$(cat ${jwtSecretPath})"
-        exec ${cfg.package}/bin/scanapp-server
+        exec ${cfg.package}/bin/shopapp-server
       '';
     };
 
@@ -238,7 +238,7 @@ in {
         forceSSL = cfg.nginx.enableSSL;
         enableACME = cfg.nginx.enableSSL;
 
-        root = "${cfg.package}/lib/scanapp/dist";
+        root = "${cfg.package}/lib/shopapp/dist";
 
         # API routes - proxy to Node server
         locations."/api/" = {
@@ -291,11 +291,11 @@ in {
         userServices = true;
       };
       extraServiceFiles = {
-        scanapp = ''
+        shopapp = ''
           <?xml version="1.0" standalone='no'?>
           <!DOCTYPE service-group SYSTEM "avahi-service.dtd">
           <service-group>
-            <name>Scan App</name>
+            <name>Shop App</name>
             <service>
               <type>_http._tcp</type>
               <port>80</port>
@@ -307,8 +307,8 @@ in {
     };
 
     # Publish hostname via mDNS
-    systemd.services.scanapp-avahi-hostname = mkIf cfg.avahi.enable {
-      description = "Publish Scan App mDNS hostname";
+    systemd.services.shopapp-avahi-hostname = mkIf cfg.avahi.enable {
+      description = "Publish Shop App mDNS hostname";
       wantedBy = [ "multi-user.target" ];
       after = [ "avahi-daemon.service" "network-online.target" ];
       requires = [ "avahi-daemon.service" ];

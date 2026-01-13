@@ -31,15 +31,15 @@ generate_credentials() {
   fi
 
   cat > "$ENV_FILE" << EOF
-# Auto-generated credentials for Scan App
+# Auto-generated credentials for Shop App
 # Created: $(date)
 # KEEP THIS FILE SAFE - it contains your database credentials
 #
 # If you lose this file, see recover-db.sh for recovery options
 
-DATABASE_USER=scanapp
+DATABASE_USER=shopapp
 DATABASE_PASSWORD=$DB_PASSWORD
-DATABASE_NAME=scanapp_db
+DATABASE_NAME=shopapp_db
 JWT_SECRET=$JWT_SECRET
 EOF
 
@@ -47,9 +47,9 @@ EOF
   echo "=============================================="
   echo "  SECURE CREDENTIALS GENERATED"
   echo "=============================================="
-  echo "  Database User:     scanapp"
+  echo "  Database User:     shopapp"
   echo "  Database Password: $DB_PASSWORD"
-  echo "  Database Name:     scanapp_db"
+  echo "  Database Name:     shopapp_db"
   echo "=============================================="
   echo ""
   echo "  Credentials saved to: $ENV_FILE"

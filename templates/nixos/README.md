@@ -1,6 +1,6 @@
-# Scan Containers NixOS Deployment
+# Shop App NixOS Deployment
 
-This template shows how to deploy Scan Containers on a NixOS server **without Docker**.
+This template shows how to deploy Shop App on a NixOS server **without Docker**.
 
 ## Quick Start
 
@@ -9,14 +9,14 @@ This template shows how to deploy Scan Containers on a NixOS server **without Do
 ```nix
 # flake.nix
 {
-  inputs.scanapp.url = "github:Rafie97/scan-containers";
+  inputs.shopapp.url = "github:Rafie97/scan-containers";
 
-  outputs = { nixpkgs, scanapp, ... }: {
+  outputs = { nixpkgs, shopapp, ... }: {
     nixosConfigurations.yourhost = nixpkgs.lib.nixosSystem {
       modules = [
-        scanapp.nixosModules.scanapp
+        shopapp.nixosModules.shopapp
         {
-          services.scanapp = {
+          services.shopapp = {
             enable = true;
             domain = "shop.home.local";
           };
@@ -33,14 +33,14 @@ This template shows how to deploy Scan Containers on a NixOS server **without Do
 # /etc/nixos/configuration.nix
 { config, pkgs, ... }:
 let
-  scanapp = builtins.fetchGit {
+  shopapp = builtins.fetchGit {
     url = "https://github.com/Rafie97/scan-containers";
     ref = "main";
   };
 in {
-  imports = [ "${scanapp}/nix/module.nix" ];
+  imports = [ "${shopapp}/nix/module.nix" ];
 
-  services.scanapp = {
+  services.shopapp = {
     enable = true;
     domain = "shop.home.local";
   };
@@ -57,7 +57,7 @@ sudo nixos-rebuild switch
 
 The NixOS module automatically sets up:
 
-- **PostgreSQL** database with the `scanapp` user and database
+- **PostgreSQL** database with the `shopapp` user and database
 - **JWT secret** auto-generated on first start
 - **systemd service** running the Node.js API server
 - **nginx** reverse proxy at your configured domain
@@ -76,7 +76,7 @@ If using Avahi, any device on your local network can access `shop.home.local`.
 
 ## Secrets Management
 
-By default, the JWT secret is **auto-generated** on first start and stored in `/var/lib/scanapp/jwt-secret`. This is fine for most homelab setups.
+By default, the JWT secret is **auto-generated** on first start and stored in `/var/lib/shopapp/jwt-secret`. This is fine for most homelab setups.
 
 For production or multi-machine deployments, you can use SOPS or agenix:
 
@@ -84,11 +84,11 @@ For production or multi-machine deployments, you can use SOPS or agenix:
 
 ```nix
 {
-  sops.secrets."scanapp/jwt-secret".owner = "scanapp";
+  sops.secrets."shopapp/jwt-secret".owner = "shopapp";
 
-  services.scanapp = {
+  services.shopapp = {
     autoGenerateJwtSecret = false;
-    jwtSecretFile = config.sops.secrets."scanapp/jwt-secret".path;
+    jwtSecretFile = config.sops.secrets."shopapp/jwt-secret".path;
   };
 }
 ```
@@ -97,14 +97,14 @@ For production or multi-machine deployments, you can use SOPS or agenix:
 
 ```nix
 {
-  age.secrets.scanapp-jwt = {
-    file = ./secrets/scanapp-jwt.age;
-    owner = "scanapp";
+  age.secrets.shopapp-jwt = {
+    file = ./secrets/shopapp-jwt.age;
+    owner = "shopapp";
   };
 
-  services.scanapp = {
+  services.shopapp = {
     autoGenerateJwtSecret = false;
-    jwtSecretFile = config.age.secrets.scanapp-jwt.path;
+    jwtSecretFile = config.age.secrets.shopapp-jwt.path;
   };
 }
 ```
@@ -121,8 +121,8 @@ For production or multi-machine deployments, you can use SOPS or agenix:
 | `ports.app` | `8082` | Frontend/Expo port |
 | `database.createLocally` | `true` | Create local PostgreSQL |
 | `database.host` | `"/run/postgresql"` | DB host (socket path for local) |
-| `database.name` | `"scanapp"` | Database name |
-| `database.user` | `"scanapp"` | Database user |
+| `database.name` | `"shopapp"` | Database name |
+| `database.user` | `"shopapp"` | Database user |
 | `nginx.enable` | `true` | Enable nginx reverse proxy |
 | `nginx.enableSSL` | `false` | Enable ACME SSL |
 | `avahi.enable` | `true` | Enable mDNS advertisement |
@@ -131,19 +131,19 @@ For production or multi-machine deployments, you can use SOPS or agenix:
 ## Using an External Database
 
 ```nix
-services.scanapp = {
+services.shopapp = {
   enable = true;
   domain = "shop.example.com";
 
   autoGenerateJwtSecret = false;
-  jwtSecretFile = config.sops.secrets."scanapp/jwt-secret".path;
+  jwtSecretFile = config.sops.secrets."shopapp/jwt-secret".path;
 
   database = {
     createLocally = false;
     host = "postgres.example.com";
-    name = "scanapp_prod";
-    user = "scanapp";
-    passwordFile = config.sops.secrets."scanapp/db-password".path;
+    name = "shopapp_prod";
+    user = "shopapp";
+    passwordFile = config.sops.secrets."shopapp/db-password".path;
   };
 
   nginx.enableSSL = true;  # Use Let's Encrypt
@@ -154,13 +154,13 @@ services.scanapp = {
 
 ```bash
 # View service status
-systemctl status scanapp-server
+systemctl status shopapp-server
 
 # View logs
-journalctl -u scanapp-server -f
+journalctl -u shopapp-server -f
 
 # Check database
-sudo -u postgres psql -d scanapp -c '\dt'
+sudo -u postgres psql -d shopapp -c '\dt'
 ```
 
 ## Troubleshooting
@@ -169,7 +169,7 @@ sudo -u postgres psql -d scanapp -c '\dt'
 
 Check the logs:
 ```bash
-journalctl -u scanapp-server -e
+journalctl -u shopapp-server -e
 ```
 
 Common issues:
@@ -180,7 +180,7 @@ Common issues:
 
 For local socket connections, ensure:
 - PostgreSQL is running
-- The `scanapp` user exists: `sudo -u postgres psql -c '\du'`
+- The `shopapp` user exists: `sudo -u postgres psql -c '\du'`
 - The database exists: `sudo -u postgres psql -c '\l'`
 
 ### mDNS not working

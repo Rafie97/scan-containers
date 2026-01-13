@@ -55,7 +55,7 @@ If you lose access to the .env file, see the project documentation for recovery 
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'scanapp-credentials.txt';
+    a.download = 'shopapp-credentials.txt';
     a.click();
     URL.revokeObjectURL(url);
   };

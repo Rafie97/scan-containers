@@ -10,6 +10,9 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
+const startTime = Date.now();
+console.log(`[${startTime}] Server module loaded`);
+
 const { Pool } = pg;
 
 // Node.js server listens on this port
@@ -162,6 +165,19 @@ async function requireAuth(req, res, requiredRole = null) {
 
 // API Routes
 const apiRoutes = {
+  // ============ HEALTH CHECK ============
+
+  // GET /api/health - Health check endpoint
+  'GET /api/health': async (req, res) => {
+    try {
+      // Quick DB connectivity check
+      await pool.query('SELECT 1');
+      sendJson(res, { status: 'ok', timestamp: new Date().toISOString() });
+    } catch (error) {
+      sendJson(res, { status: 'unhealthy', error: error.message }, 503);
+    }
+  },
+
   // ============ SETUP ROUTES ============
 
   // GET /api/setup/status - Check if setup is needed
@@ -435,8 +451,8 @@ const apiRoutes = {
       database: {
         host: process.env.DATABASE_HOST || 'localhost',
         port: 5432,
-        user: process.env.DATABASE_USER || 'scanapp',
-        name: process.env.DATABASE_NAME || 'scanapp_db',
+        user: process.env.DATABASE_USER || 'shopapp',
+        name: process.env.DATABASE_NAME || 'shopapp_db',
         // Show masked password hint - full password is in .env file
         passwordHint: (process.env.DATABASE_PASSWORD || '').substring(0, 4) + '****',
       },

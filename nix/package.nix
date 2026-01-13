@@ -1,5 +1,5 @@
 # nix/package.nix
-# Builds the scanapp-server as a Nix package
+# Builds the shopapp-server as a Nix package
 { lib
 , buildNpmPackage
 , nodejs_22
@@ -10,13 +10,13 @@
 builtins.seq
   (builtins.trace "Shop App Server: Building Expo web app (this may take a few minutes on first build...)" null)
   (buildNpmPackage rec {
-    pname = "scanapp-server";
+    pname = "shopapp-server";
     version = "0.1.0";
 
     src = ./..;
 
     # Generate with: nix run nixpkgs#prefetch-npm-deps -- package-lock.json
-    npmDepsHash = "sha256-S14iXwJpEbRgysct136cOcCJLAFm4Lt07ruJxDEKFXQ=";
+    npmDepsHash = "sha256-BwaqIooGLhW3rZGZwjpo7N3XKYhBqz9phnAk4KP19j0=";
 
     # Allow npm to write to cache during install
     makeCacheWritable = true;
@@ -38,29 +38,29 @@ builtins.seq
     installPhase = ''
       runHook preInstall
 
-      mkdir -p $out/{bin,lib/scanapp}
+      mkdir -p $out/{bin,lib/shopapp}
 
       # Copy server and dependencies
-      cp -r node_modules $out/lib/scanapp/
-      cp server.node.mjs $out/lib/scanapp/
-      cp -r db $out/lib/scanapp/
+      cp -r node_modules $out/lib/shopapp/
+      cp server.node.mjs $out/lib/shopapp/
+      cp -r db $out/lib/shopapp/
 
       # Copy built web app
-      cp -r dist $out/lib/scanapp/
+      cp -r dist $out/lib/shopapp/
 
       # Create wrapper script that sets up the environment
-      makeWrapper ${nodejs_22}/bin/node $out/bin/scanapp-server \
-        --add-flags "$out/lib/scanapp/server.node.mjs" \
+      makeWrapper ${nodejs_22}/bin/node $out/bin/shopapp-server \
+        --add-flags "$out/lib/shopapp/server.node.mjs" \
         --set NODE_ENV production
 
       runHook postInstall
     '';
 
     meta = with lib; {
-      description = "Scan Containers - Grocery store shopping assistant API server";
+      description = "Shop App - Grocery store shopping assistant API server";
       homepage = "https://github.com/Rafie97/scan-containers";
       license = licenses.mit;
       platforms = platforms.linux ++ platforms.darwin;
-      mainProgram = "scanapp-server";
+      mainProgram = "shopapp-server";
     };
   })

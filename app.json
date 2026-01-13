@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "scan-app",
-    "slug": "scan-app",
+    "name": "shop-app",
+    "slug": "shop-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.rafajchillin.scanapp",
+      "bundleIdentifier": "com.rafajchillin.shopapp",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -24,7 +24,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.rafajchillin.scanapp"
+      "package": "com.rafajchillin.shopapp"
     },
     "web": {
       "output": "static",
